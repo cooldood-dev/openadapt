@@ -4,6 +4,7 @@ import dev.adapt.v3.feature.property.impl.EnumProperty;
 import dev.adapt.v3.hud.HudModule;
 import dev.adapt.v3.ui.render.Fonts;
 import dev.adapt.v3.ui.render.Glass;
+import dev.adapt.v3.ui.theme.OldSchoolStyle;
 import dev.adapt.v3.ui.theme.Theme;
 import dev.adapt.v3.util.Displayable;
 import dev.adapt.v3.util.animation.Spring;
@@ -47,6 +48,7 @@ public final class ArmorStatusHud extends HudModule {
         return this.layout.getValue() == ArmorStatusHud.Layout.HORIZONTAL;
     }
 
+
     @Override
     public float getBaseScale() {
         return 0.85F;
@@ -81,6 +83,10 @@ public final class ArmorStatusHud extends HudModule {
 
     @Override
     public boolean shouldRender() {
+        if (OldSchoolStyle.active()) {
+            return false;
+        }
+
         for (int i = 0; i < SLOTS.length; i++) {
             if (this.slotSprings[i].get() > 0.01F || !this.getDisplayStack(SLOTS[i], false).isEmpty()) {
                 return true;

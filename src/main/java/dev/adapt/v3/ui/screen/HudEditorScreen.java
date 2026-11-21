@@ -44,7 +44,7 @@ public final class HudEditorScreen extends BaseScreen {
     public void extractBackground(GuiGraphicsExtractor graphics, int value, int value2, float value3) {
         float f = this.getOpenProgress();
         this.renderParentOrPanorama(graphics, value3);
-        if (this.minecraft.level == null) {
+        if (Theme.isModern() && this.minecraft.level == null) {
             graphics.blurBeforeThisStratum();
         }
 

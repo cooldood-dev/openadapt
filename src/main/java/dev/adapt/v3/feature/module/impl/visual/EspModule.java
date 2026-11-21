@@ -17,7 +17,8 @@ import net.minecraft.world.phys.Vec3;
 public final class EspModule extends Module {
     public static final int OUTLINE_COLOR = 1728053247;
     public static final int OUTLINE_WIDTH = 1;
-    public static final float GLOW_RADIUS = 15.0F;
+    // the glow blur costs about one texture fetch per pixel of radius (times GUI scale), at full resolution
+    public static final float GLOW_RADIUS = 6.0F;
     public static final float GLOW_ALPHA = 0.6F;
     public static final double INFLATE_XZ = 0.15;
     public static final double INFLATE_Y = 0.1;
@@ -50,7 +51,7 @@ public final class EspModule extends Module {
                 }
             }
 
-            MaskOutline.submit(arraylist, 1728053247, 1.0F, 15.0F, 0.6F);
+            MaskOutline.submit(arraylist, OUTLINE_COLOR, OUTLINE_WIDTH, GLOW_RADIUS, GLOW_ALPHA);
         }
     }
 

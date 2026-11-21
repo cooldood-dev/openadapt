@@ -24,7 +24,9 @@ import dev.adapt.v3.ui.render.Fonts;
 import dev.adapt.v3.ui.render.Glass;
 import dev.adapt.v3.ui.render.Render2D;
 import dev.adapt.v3.ui.theme.Accent;
+import dev.adapt.v3.ui.theme.OldSchoolStyle;
 import dev.adapt.v3.ui.theme.Theme;
+import dev.adapt.v3.ui.theme.UiMode;
 import dev.adapt.v3.util.Displayable;
 import dev.adapt.v3.util.animation.Spring;
 import dev.adapt.v3.util.render.ColorUtility;
@@ -155,6 +157,7 @@ public final class DashboardScreen extends BaseScreen {
     public static boolean chatOpen;
     public static boolean chatCustomMoved;
     public static final Set<ModuleCategory> pinnedCategories = EnumSet.noneOf(ModuleCategory.class);
+    public static final Set<ModuleCategory> collapsedCategories = EnumSet.noneOf(ModuleCategory.class);
     public float columnsRightEdge;
     public float columnsChatShift;
     public float columnGap;
@@ -388,7 +391,9 @@ public final class DashboardScreen extends BaseScreen {
         boolean flag = this.draggingCategory == null && Render2D.containsPoint(value5, value6, value, value2, value3, value4);
         float f = clamp01(this.getSpring(text).target(flag ? 1.0F : 0.0F).update());
         Glass.drawPanel(graphics, value, value2, value3, value4, 7.0F, value7, 0.5F);
-        if (f > 0.01F) {
+        if (f > 0.01F && OldSchoolStyle.active()) {
+            Render2D.fillRect(graphics, value, value2, value3, value4, ColorUtility.scaleAlpha(OldSchoolStyle.HOVER, value7 * f));
+        } else if (f > 0.01F) {
             Render2D.fillSubpixelRoundedRect(graphics, value, value2, value3, value4, 7.0F, ColorUtility.scaleAlpha(268435455, value7 * f));
             Render2D.drawRoundedBorderTextured(graphics, value, value2, value3, value4, 7.0F, 1.0F, ColorUtility.scaleAlpha(788529151, value7 * f));
         }
@@ -480,7 +485,9 @@ public final class DashboardScreen extends BaseScreen {
         float f3 = 14.0F - (1.0F - value) * 10.0F;
         float f4 = 20.0F;
         Glass.drawPanel(graphics, f2, f3, f1, 20.0F, 7.0F, value, 0.5F);
-        if (f > 0.01F) {
+        if (f > 0.01F && OldSchoolStyle.active()) {
+            Render2D.fillRect(graphics, f2, f3 + 19.0F, f1, 1.0F, ColorUtility.scaleAlpha(OldSchoolStyle.accent(), value * f));
+        } else if (f > 0.01F) {
             Render2D.fillSubpixelRoundedRect(graphics, f2, f3, f1, 20.0F, 7.0F, ColorUtility.scaleAlpha(268435455, value * f));
             Render2D.drawRoundedBorderTextured(graphics, f2, f3, f1, 20.0F, 7.0F, 1.0F, ColorUtility.scaleAlpha(788529151, value * f));
         }
@@ -590,9 +597,52 @@ public final class DashboardScreen extends BaseScreen {
     public static float calcPropertyHeight(Property<?> property, float value) {
         if (property instanceof MultiBooleanProperty multibooleanproperty) {
             return calcMultiSelectHeight(multibooleanproperty, value);
+        } else if (property instanceof EnumProperty enumproperty && isInlineEnum(enumproperty)) {
+            return 16.0F + enumproperty.getValues().length * OldSchoolStyle.ENUM_OPTION_HEIGHT + 2.0F;
         } else {
             return property instanceof NumberProperty ? 24.0F : 16.0F;
         }
+    }
+
+    // OldSchool lists every mode under its setting, like classic clients; long lists keep the dropdown
+    public static boolean isInlineEnum(EnumProperty property) {
+        return OldSchoolStyle.active() && property.getValues().length <= OldSchoolStyle.MAX_INLINE_ENUM;
+    }
+
+    public float renderInlineEnum(
+        GuiGraphicsExtractor graphics, EnumProperty property, String text, float value, float value2, float value3, float value4, float value5, float value6
+    ) {
+        Enum[] aenum = property.getValues();
+        float f = this.updateRowHover(property, value, value2, value3, 15.0F, value5, value6);
+        renderSettingRowHover(graphics, value, value2, value3, 15.0F, f, value4);
+        String s = Fonts.SMALL.ellipsize(text + ": " + property.getDisplayValue(), value3);
+        Fonts.SMALL.drawVCentered(graphics, s, value, value2 + 7.5F, ColorUtility.scaleAlpha(getSettingLabelColor(f), value4));
+        drawEnumBadge(graphics, property.getValue(), value + Fonts.SMALL.getWidth(s) + 4.0F, value2 + 7.5F, value4);
+        this.addClippedHitRegion(value, value2, value3, 15.0F, value5, value6, (button, mouseX, mouseY) -> {
+            int i = 0;
+
+            while (i < aenum.length && aenum[i] != property.getValue()) {
+                i++;
+            }
+
+            this.selectEnumValue(property, aenum[(i + 1) % aenum.length]);
+        }, null);
+        float f1 = value2 + 16.0F;
+
+        for (Enum oenum : aenum) {
+            float f2 = this.updateRowHover("eo" + springKeyOf(property) + oenum.name(), value, f1, value3, OldSchoolStyle.ENUM_OPTION_HEIGHT, value5, value6);
+            int j = property.getValue() == oenum ? OldSchoolStyle.accent() : ColorUtility.lerpColor(OldSchoolStyle.SETTING_DIM, -1, f2);
+            String s1 = getEnumDisplayName(oenum);
+            float f3 = f1 + OldSchoolStyle.ENUM_OPTION_HEIGHT / 2.0F;
+            Fonts.SMALL.drawVCentered(graphics, s1, value + 6.0F, f3, ColorUtility.scaleAlpha(j, value4));
+            drawEnumBadge(graphics, oenum, value + 6.0F + Fonts.SMALL.getWidth(s1) + 4.0F, f3, value4);
+            this.addClippedHitRegion(
+                value, f1, value3, OldSchoolStyle.ENUM_OPTION_HEIGHT, value5, value6, (button2, mouseX2, mouseY2) -> this.selectEnumValue(property, oenum), null
+            );
+            f1 += OldSchoolStyle.ENUM_OPTION_HEIGHT;
+        }
+
+        return f1 + 2.0F;
     }
 
     public static boolean shouldShowMultiSelectLabel(MultiBooleanProperty property) {
@@ -767,49 +817,73 @@ public final class DashboardScreen extends BaseScreen {
     }
 
     public void renderCategoryPanel(GuiGraphicsExtractor graphics, ModuleCategory moduleCategory, int value, int value2, int value3, float value4) {
+        boolean os = OldSchoolStyle.active();
+        float hh = os ? OldSchoolStyle.HEADER_HEIGHT : 28.0F;
+        float rh = os ? OldSchoolStyle.ROW_HEIGHT : 21.0F;
         float[] afloat = categoryPositions.get(moduleCategory);
         float f = Math.max(0.0F, Math.min(1.0F, this.openSpring.get() * 1.4F - value * 0.1F));
         float f1 = value4 * f;
         float f2 = afloat[0] - (pinnedCategories.contains(moduleCategory) ? 0.0F : this.getChatShiftOffset());
         float f3 = afloat[1] + (1.0F - f) * -16.0F;
         List<Module> list = Adapt.getInstance().getModuleManager().getByCategory(moduleCategory);
+        boolean collapsed = os && collapsedCategories.contains(moduleCategory);
+        List<Module> rows = collapsed ? List.of() : list;
         float f4 = 0.0F;
 
-        for (Module module : list) {
+        for (Module module : rows) {
             float f5 = this.getSpring("vis" + module.getId()).target(this.matchesSearch(module) ? 1.0F : 0.0F).update();
             float f6 = this.getSpring("exp" + module.getId()).target(this.expandedModule == module ? 1.0F : 0.0F).update();
-            f4 += 21.0F * f5 + this.calcModuleSettingsHeight(module) * Math.max(0.0F, f6) * f5;
+            f4 += rh * f5 + this.calcModuleSettingsHeight(module) * Math.max(0.0F, f6) * f5;
         }
 
-        f4 += 5.0F;
-        float f18 = Math.max(60.0F, this.height - f3 - 28.0F - 34.0F);
+        f4 += collapsed ? 0.0F : 5.0F;
+        float f18 = Math.max(60.0F, this.height - f3 - hh - 34.0F);
         if (afloat[2] > 0.0F) {
-            f18 = Math.max(40.0F, Math.min(f18, afloat[2] - 28.0F));
+            f18 = Math.max(40.0F, Math.min(f18, afloat[2] - hh));
         }
 
         float f19 = Math.min(f4, f18);
-        float f20 = 28.0F + f19;
-        float f21 = 10.0F;
+        float f20 = hh + f19;
         this.categoryBounds.put(moduleCategory, new float[]{f2, f3, 132.0F, f20});
         float f7 = Math.max(0.0F, f4 - f18);
         this.categoryScrollTargets.put(moduleCategory, Math.max(0.0F, Math.min(f7, this.categoryScrollTargets.getOrDefault(moduleCategory, 0.0F))));
         float f8 = this.categoryScrollSprings.get(moduleCategory).target(this.categoryScrollTargets.get(moduleCategory)).update();
         float f9 = this.getSpring("lift" + moduleCategory).target(this.draggingCategory == moduleCategory ? 1.0F : 0.0F).update();
-        if (f9 > 0.01F) {
-            Render2D.drawDropShadow(graphics, f2, f3 + 6.0F, 132.0F, f20, 10.0F, 26.0F, ColorUtility.scaleAlpha(1610612736, f1 * f9));
+        if (os) {
+            OldSchoolStyle.panel(graphics, f2, f3, 132.0F, f20, f1);
+            Render2D.fillRect(graphics, f2, f3, 132.0F, hh, ColorUtility.scaleAlpha(OldSchoolStyle.HEADER_BG, f1));
+            float f21 = f3 + hh / 2.0F;
+            int k1 = ColorUtility.scaleAlpha(OldSchoolStyle.TEXT_ON, f1);
+            Fonts.MEDIUM.drawVCentered(graphics, moduleCategory.getDisplayName(), f2 + 6.0F, f21, k1);
+            Fonts.MEDIUM.drawRightAligned(graphics, collapsed ? "+" : "-", f2 + 132.0F - 6.0F, f21 - Fonts.MEDIUM.getHalfPointSize(), k1);
+        } else {
+            if (f9 > 0.01F) {
+                Render2D.drawDropShadow(graphics, f2, f3 + 6.0F, 132.0F, f20, 10.0F, 26.0F, ColorUtility.scaleAlpha(1610612736, f1 * f9));
+            }
+
+            Render2D.drawDropShadow(graphics, f2, f3 + 2.0F, 132.0F, f20, 10.0F, 14.0F, ColorUtility.scaleAlpha(1207959552, f1));
+            Glass.drawBorderlessPanel(graphics, f2, f3, 132.0F, f20, 10.0F, f1, 0.55F, 1.0F, 0xC80C0C10);
+            int i = (int)list.stream().filter(module2 -> module2.canToggle() && module2.isEnabled()).count();
+            int j = (int)list.stream().filter(Module::canToggle).count();
+            Fonts.ICONS
+                .drawIconCentered(graphics, getCategoryIcon(moduleCategory), f2 + 9.0F + 5.0F, f3 + 14.0F, 1.0F, ColorUtility.scaleAlpha(Theme.getAccentColor(), f1));
+            Fonts.SEMIBOLD
+                .draw(graphics, moduleCategory.getDisplayName(), f2 + 9.0F + 15.0F, f3 + 14.0F - Fonts.SEMIBOLD.getHalfPointSize(), ColorUtility.scaleAlpha(-1, f1));
+            Fonts.SMALL
+                .drawRightAligned(graphics, i + "/" + j, f2 + 132.0F - 9.0F, f3 + 14.0F - Fonts.SMALL.getHalfPointSize(), ColorUtility.scaleAlpha(1509949439, f1));
+            Render2D.fillRect(graphics, f2 + 9.0F + 2.0F, f3 + 28.0F - 1.0F, 110.0F, 0.5F, ColorUtility.scaleAlpha(452984831, f1));
         }
 
-        Render2D.drawDropShadow(graphics, f2, f3 + 2.0F, 132.0F, f20, 10.0F, 14.0F, ColorUtility.scaleAlpha(1207959552, f1));
-        Glass.drawBorderlessPanel(graphics, f2, f3, 132.0F, f20, 10.0F, f1, 0.55F, 1.0F, 0xC80C0C10);
-        int i = (int)list.stream().filter(module2 -> module2.canToggle() && module2.isEnabled()).count();
-        int j = (int)list.stream().filter(Module::canToggle).count();
-        float f10 = 14.0F;
-        Fonts.ICONS.drawIconCentered(graphics, getCategoryIcon(moduleCategory), f2 + 9.0F + 5.0F, f3 + 14.0F, 1.0F, ColorUtility.scaleAlpha(Theme.getAccentColor(), f1));
-        Fonts.SEMIBOLD.draw(graphics, moduleCategory.getDisplayName(), f2 + 9.0F + 15.0F, f3 + 14.0F - Fonts.SEMIBOLD.getHalfPointSize(), ColorUtility.scaleAlpha(-1, f1));
-        Fonts.SMALL
-            .drawRightAligned(graphics, i + "/" + j, f2 + 132.0F - 9.0F, f3 + 14.0F - Fonts.SMALL.getHalfPointSize(), ColorUtility.scaleAlpha(1509949439, f1));
-        Render2D.fillRect(graphics, f2 + 9.0F + 2.0F, f3 + 28.0F - 1.0F, 110.0F, 0.5F, ColorUtility.scaleAlpha(452984831, f1));
-        this.hitRegions.add(new DashboardScreen.Hit(f2, f3, 132.0F, 28.0F, (button, mouseX, mouseY) -> {
+        this.hitRegions.add(new DashboardScreen.Hit(f2, f3, 132.0F, hh, (button, mouseX, mouseY) -> {
+            if (os && button == 3) {
+                if (!collapsedCategories.remove(moduleCategory)) {
+                    collapsedCategories.add(moduleCategory);
+                }
+
+                this.onUiFeedback(1.1F);
+                return;
+            }
+
             if (!pinnedCategories.contains(moduleCategory)) {
                 afloat[0] = f2;
                 pinnedCategories.add(moduleCategory);
@@ -822,16 +896,16 @@ public final class DashboardScreen extends BaseScreen {
             this.categoryDragOffX = (float)mouseX - afloat[0];
             this.categoryDragOffY = (float)mouseY - afloat[1];
         }, null));
-        float f11 = f3 + 28.0F;
-        float f12 = f3 + f20 - 3.0F;
+        float f11 = f3 + hh;
+        float f12 = f3 + f20 - (os ? 0.0F : 3.0F);
         graphics.enableScissor((int)f2, (int)f11, (int)(f2 + 132.0F), (int)Math.ceil(f12));
-        this.renderModuleHoverHighlight(graphics, moduleCategory, list, f2, f11 + 2.0F - f8, f1, value2, value3, f11, f12);
+        this.renderModuleHoverHighlight(graphics, moduleCategory, rows, f2, f11 + 2.0F - f8, f1, value2, value3, f11, f12);
         float f13 = f11 + 2.0F - f8;
 
-        for (Module module1 : list) {
+        for (Module module1 : rows) {
             float f14 = this.getSpring("vis" + module1.getId()).get();
             if (!(f14 < 0.01F)) {
-                float f15 = 21.0F * f14;
+                float f15 = rh * f14;
                 this.renderModuleRow(graphics, module1, f2, f13, f15, f14 * f1, value2, value3, f11, f12);
                 f13 += f15;
                 float f16 = Math.max(0.0F, this.getSpring("exp" + module1.getId()).get());
@@ -841,7 +915,10 @@ public final class DashboardScreen extends BaseScreen {
                     int l = (int)Math.min(f12, f13 + f17);
                     if (l > k) {
                         graphics.enableScissor((int)f2, k, (int)(f2 + 132.0F), l);
-                        Render2D.fillSubpixelRoundedRect(graphics, f2 + 5.0F, f13 + 1.5F, 122.0F, f17 - 3.0F, 6.666667F, ColorUtility.scaleAlpha(234881023, f1));
+                        if (!os) {
+                            Render2D.fillSubpixelRoundedRect(graphics, f2 + 5.0F, f13 + 1.5F, 122.0F, f17 - 3.0F, 6.666667F, ColorUtility.scaleAlpha(234881023, f1));
+                        }
+
                         this.renderModuleSettings(graphics, module1, f2 + 9.0F + 8.0F, f13 + 3.0F + 2.5F, 102.0F, Math.min(1.0F, f16) * f1, k, l);
                         graphics.disableScissor();
                     }
@@ -855,9 +932,12 @@ public final class DashboardScreen extends BaseScreen {
         if (f7 > 0.0F) {
             float f22 = f19 - 8.0F;
             float f23 = Math.max(16.0F, f22 * f18 / f4);
-            Render2D.fillRoundedRect(
-                graphics, f2 + 132.0F - 3.5F, f11 + 4.0F + (f22 - f23) * (f8 / f7), 1.5F, f23, 0.75F, ColorUtility.scaleAlpha(Theme.getTrackColor(), f1)
-            );
+            float f24 = f11 + 4.0F + (f22 - f23) * (f8 / f7);
+            if (os) {
+                Render2D.fillRect(graphics, f2 + 132.0F - 2.0F, f24, 1.5F, f23, ColorUtility.scaleAlpha(OldSchoolStyle.TRACK, f1));
+            } else {
+                Render2D.fillRoundedRect(graphics, f2 + 132.0F - 3.5F, f24, 1.5F, f23, 0.75F, ColorUtility.scaleAlpha(Theme.getTrackColor(), f1));
+            }
         }
     }
 
@@ -870,11 +950,13 @@ public final class DashboardScreen extends BaseScreen {
         float f1 = -1.0F;
         float f2 = 0.0F;
         boolean flag = this.draggingCategory == null && value5 >= value6 && value5 < value7;
+        boolean os = OldSchoolStyle.active();
+        float rh = os ? OldSchoolStyle.ROW_HEIGHT : 21.0F;
 
         for (Module module : modules) {
             float f3 = this.getSpring("vis" + module.getId()).get();
             if (!(f3 < 0.01F)) {
-                float f4 = 21.0F * f3;
+                float f4 = rh * f3;
                 if (flag && Render2D.containsPoint(value4, value5, value, f, 132.0F, f4)) {
                     f1 = f - value2;
                     f2 = f4;
@@ -903,7 +985,11 @@ public final class DashboardScreen extends BaseScreen {
         float f7 = value2 + aspring[0].update();
         float f8 = aspring[2].update();
         if (f6 > 0.01F && f8 > 2.0F) {
-            Render2D.fillSubpixelRoundedRect(graphics, value + 5.0F, f7 + 1.5F, 122.0F, f8 - 3.0F, 4.0F, ColorUtility.scaleAlpha(536870911, value3 * f6));
+            if (os) {
+                Render2D.fillRect(graphics, value, f7, 132.0F, f8, ColorUtility.scaleAlpha(OldSchoolStyle.HOVER, value3 * f6));
+            } else {
+                Render2D.fillSubpixelRoundedRect(graphics, value + 5.0F, f7 + 1.5F, 122.0F, f8 - 3.0F, 4.0F, ColorUtility.scaleAlpha(536870911, value3 * f6));
+            }
         }
     }
 
@@ -935,6 +1021,21 @@ public final class DashboardScreen extends BaseScreen {
         float f2 = Render2D.snapToPixel(value2);
         float f3 = value2 - f2;
         float f4 = f2 + value3 / 2.0F;
+        if (OldSchoolStyle.active()) {
+            int k = ColorUtility.lerpColor(OldSchoolStyle.TEXT_OFF, OldSchoolStyle.TEXT_ON, f1);
+            Fonts.ROW.drawVCentered(graphics, module.getName(), value + 6.0F, f4, ColorUtility.scaleAlpha(ColorUtility.lerpColor(k, -1, f * 0.35F), value4));
+            Fonts.ROW
+                .drawRightAligned(
+                    graphics,
+                    this.expandedModule == module ? "-" : "+",
+                    value + 132.0F - 6.0F,
+                    f4 - Fonts.ROW.getHalfPointSize(),
+                    ColorUtility.scaleAlpha(ColorUtility.lerpColor(OldSchoolStyle.SETTING, -1, f1), value4)
+                );
+            this.addModuleRowHit(module, value, value2, value3, value7, value8, flag);
+            return;
+        }
+
         if (f1 > 0.01F) {
             renderActiveModuleFill(graphics, value + 5.0F, value2 + 1.5F, 122.0F, value3 - 3.0F, value4 * f1);
         }
@@ -959,8 +1060,12 @@ public final class DashboardScreen extends BaseScreen {
             this.renderKeybindBadge(graphics, module.getId(), s, false, f7, value2 + value3 / 2.0F, value4, s != null ? f : 0.0F, 0.0F);
         }
 
+        this.addModuleRowHit(module, value, value2, value3, value7, value8, flag);
+    }
+
+    public void addModuleRowHit(Module module, float value, float value2, float value3, float value4, float value5, boolean flag) {
         if (flag && value3 > 6.0F) {
-            this.addClippedHitRegion(value, value2, 132.0F, value3, value7, value8, (button, mouseX, mouseY) -> {
+            this.addClippedHitRegion(value, value2, 132.0F, value3, value4, value5, (button, mouseX, mouseY) -> {
                 if (button == 1 && !module.canToggle()) {
                     this.expandedModule = this.expandedModule == module ? null : module;
                     this.onUiFeedback(1.1F);
@@ -987,7 +1092,9 @@ public final class DashboardScreen extends BaseScreen {
     }
 
     public static void renderSettingRowHover(GuiGraphicsExtractor graphics, float x, float y, float width, float height, float first, float second) {
-        if (first > 0.01F) {
+        if (first > 0.01F && OldSchoolStyle.active()) {
+            Render2D.fillRect(graphics, x - rowHoverPadLeft, y, width + rowHoverPadLeft + rowHoverPadRight, height, ColorUtility.scaleAlpha(OldSchoolStyle.HOVER, second * first));
+        } else if (first > 0.01F) {
             Render2D.fillSubpixelRoundedRect(
                 graphics, x - rowHoverPadLeft, y, width + rowHoverPadLeft + rowHoverPadRight, height, 4.0F, ColorUtility.scaleAlpha(268435455, second * first)
             );
@@ -995,6 +1102,10 @@ public final class DashboardScreen extends BaseScreen {
     }
 
     public static int getSettingLabelColor(float value) {
+        if (OldSchoolStyle.active()) {
+            return ColorUtility.lerpColor(OldSchoolStyle.SETTING, -1, value);
+        }
+
         return ColorUtility.lerpColor(Theme.getMutedLabel(), -218103809, value);
     }
 
@@ -1006,17 +1117,30 @@ public final class DashboardScreen extends BaseScreen {
         float f = this.updateRowHover(module.getId() + "kb", value, value2, value3, 15.0F, value5, value6);
         renderSettingRowHover(graphics, value, value2, value3, 15.0F, f, value4);
         Fonts.SMALL.drawVCentered(graphics, "Keybind", value, value2 + 7.5F, ColorUtility.scaleAlpha(getSettingLabelColor(f), value4));
-        this.renderKeybindBadge(
-            graphics,
-            module.getId() + "s",
-            Adapt.getInstance().getBindingManager().getBindName(module),
-            this.bindingModule == module,
-            value + value3,
-            value2 + 7.5F,
-            value4,
-            1.0F,
-            f
-        );
+        if (OldSchoolStyle.active()) {
+            boolean flag = this.bindingModule == module;
+            String s = Adapt.getInstance().getBindingManager().getBindName(module);
+            Fonts.SMALL
+                .drawRightAligned(
+                    graphics,
+                    flag ? "Press a key" : (s == null ? "None" : s),
+                    value + value3,
+                    value2 + 7.5F - Fonts.SMALL.getHalfPointSize(),
+                    ColorUtility.scaleAlpha(flag ? OldSchoolStyle.accent() : ColorUtility.lerpColor(OldSchoolStyle.SETTING_DIM, -1, f), value4)
+                );
+        } else {
+            this.renderKeybindBadge(
+                graphics,
+                module.getId() + "s",
+                Adapt.getInstance().getBindingManager().getBindName(module),
+                this.bindingModule == module,
+                value + value3,
+                value2 + 7.5F,
+                value4,
+                1.0F,
+                f
+            );
+        }
         this.addClippedHitRegion(value, value2, value3, 15.0F, value5, value6, (button, mouseX, mouseY) -> {
             this.bindingModule = this.bindingModule == module ? null : module;
             this.onUiFeedback(1.4F);
@@ -1044,18 +1168,25 @@ public final class DashboardScreen extends BaseScreen {
         float f = clamp01(this.getGroupExpandSpring(module, text).target(expandedGroups.contains(s) ? 1.0F : 0.0F).update());
         float f1 = this.updateRowHover("gh" + s, value, value2, value3, 14.0F, value5, value6);
         float f2 = value2 + 7.0F;
-        Fonts.SMALL.drawVCentered(graphics, text, value, f2, ColorUtility.scaleAlpha(ColorUtility.lerpColor(-1929379841, -218103809, f1), value4));
-        float f3 = value + Fonts.SMALL.getWidth(text) + 6.0F;
-        float f4 = value + value3 - 13.0F;
-        if (f4 > f3) {
-            Render2D.fillRect(graphics, f3, f2, f4 - f3, 0.5F, ColorUtility.scaleAlpha(452984831, value4));
-        }
+        boolean os = OldSchoolStyle.active();
+        if (os) {
+            int k = ColorUtility.scaleAlpha(ColorUtility.lerpColor(OldSchoolStyle.TEXT_ON, -1, f1), value4);
+            Fonts.SMALL.drawVCentered(graphics, text, value, f2, k);
+            Fonts.SMALL.drawRightAligned(graphics, expandedGroups.contains(s) ? "-" : "+", value + value3, f2 - Fonts.SMALL.getHalfPointSize(), k);
+        } else {
+            Fonts.SMALL.drawVCentered(graphics, text, value, f2, ColorUtility.scaleAlpha(ColorUtility.lerpColor(-1929379841, -218103809, f1), value4));
+            float f3 = value + Fonts.SMALL.getWidth(text) + 6.0F;
+            float f4 = value + value3 - 13.0F;
+            if (f4 > f3) {
+                Render2D.fillRect(graphics, f3, f2, f4 - f3, 0.5F, ColorUtility.scaleAlpha(452984831, value4));
+            }
 
-        graphics.pose().pushMatrix();
-        graphics.pose().translate(value + value3 - 4.0F, f2);
-        graphics.pose().rotate((float) (-Math.PI / 2) * (1.0F - f));
-        Fonts.ICONS.drawIconCentered(graphics, "\ue5cf", 0.0F, 0.0F, 0.8F, ColorUtility.scaleAlpha(ColorUtility.lerpColor(-2130706433, -1, f1), value4));
-        graphics.pose().popMatrix();
+            graphics.pose().pushMatrix();
+            graphics.pose().translate(value + value3 - 4.0F, f2);
+            graphics.pose().rotate((float) (-Math.PI / 2) * (1.0F - f));
+            Fonts.ICONS.drawIconCentered(graphics, "\ue5cf", 0.0F, 0.0F, 0.8F, ColorUtility.scaleAlpha(ColorUtility.lerpColor(-2130706433, -1, f1), value4));
+            graphics.pose().popMatrix();
+        }
         this.addClippedHitRegion(value, value2, value3, 14.0F, value5, value6, (button, mouseX, mouseY) -> {
             if (!expandedGroups.remove(s)) {
                 expandedGroups.add(s);
@@ -1064,8 +1195,11 @@ public final class DashboardScreen extends BaseScreen {
         value2 += 14.0F + 1.0F * f;
         float f5 = calcGroupBodyHeight(properties) * f;
         if (f5 > 0.5F) {
-            Render2D.fillSubpixelRoundedRect(graphics, value - 5.0F, value2, value3 + 10.0F, f5, 5.0F, ColorUtility.scaleAlpha(184549375, value4));
-            Render2D.drawRoundedBorderTextured(graphics, value - 5.0F, value2, value3 + 10.0F, f5, 5.0F, 1.0F, ColorUtility.scaleAlpha(268435455, value4));
+            if (!os) {
+                Render2D.fillSubpixelRoundedRect(graphics, value - 5.0F, value2, value3 + 10.0F, f5, 5.0F, ColorUtility.scaleAlpha(184549375, value4));
+                Render2D.drawRoundedBorderTextured(graphics, value - 5.0F, value2, value3 + 10.0F, f5, 5.0F, 1.0F, ColorUtility.scaleAlpha(268435455, value4));
+            }
+
             graphics.nextStratum();
             float f6 = Math.max(value5, value2);
             float f7 = Math.min(value6, value2 + f5);
@@ -1101,6 +1235,10 @@ public final class DashboardScreen extends BaseScreen {
             return this.renderBooleanRow(graphics, s, booleanproperty.getValue(), booleanproperty, value, value2, value3, value4, value5, value6, booleanproperty::toggle);
         } else if (!(property instanceof NumberProperty numberproperty)) {
             if (property instanceof EnumProperty enumproperty) {
+                if (isInlineEnum(enumproperty)) {
+                    return this.renderInlineEnum(graphics, enumproperty, s, value, value2, value3, value4, value5, value6);
+                }
+
                 float f6 = this.updateRowHover(enumproperty, value, value2, value3, 15.0F, value5, value6);
                 renderSettingRowHover(graphics, value, value2, value3, 15.0F, f6, value4);
                 float f8 = this.renderEnumTrigger(graphics, enumproperty, value + value3, value2 + 7.5F, f6, value4);
@@ -1137,13 +1275,17 @@ public final class DashboardScreen extends BaseScreen {
                     s1,
                     value + value3,
                     value2 + 7.0F - Fonts.SMALL.getHalfPointSize(),
-                    ColorUtility.scaleAlpha(ColorUtility.lerpColor(Theme.getValueText(), -1, f), value4)
+                    ColorUtility.scaleAlpha(ColorUtility.lerpColor(OldSchoolStyle.active() ? OldSchoolStyle.SETTING : Theme.getValueText(), -1, f), value4)
                 );
             float f1 = this.getSpring(numberproperty).target((float)numberproperty.getNormalized()).update();
             float f2 = this.getSpring("act" + System.identityHashCode(numberproperty))
                 .target(this.activeDragHandler != null && this.activeDragOwner == numberproperty ? 1.0F : 0.0F)
                 .update();
-            Widgets.drawSlider(graphics, value + 1.0F, value2 + 17.0F, value3 - 2.0F, f1, f2, f, value4);
+            if (OldSchoolStyle.active()) {
+                OldSchoolStyle.slider(graphics, value, value2 + 16.0F, value3, f1, value4);
+            } else {
+                Widgets.drawSlider(graphics, value + 1.0F, value2 + 17.0F, value3 - 2.0F, f1, f2, f, value4);
+            }
             float f3 = value;
             float f4 = value3;
             DashboardScreen.Drag dashboardscreen$drag = (mouseX3, mouseY3) -> numberproperty.setNormalized(Math.max(0.0, Math.min(1.0, (mouseX3 - f3) / f4)));
@@ -1171,6 +1313,23 @@ public final class DashboardScreen extends BaseScreen {
             }
         } else {
             return null;
+        }
+    }
+
+    public static String getEnumBadge(Object key) {
+        return key instanceof UiMode uimode ? uimode.badge : null;
+    }
+
+    public static float getEnumBadgeWidth(Object key) {
+        String s = getEnumBadge(key);
+        return s == null ? 0.0F : Widgets.measureBadgeWidth(s) + 4.0F;
+    }
+
+    // a small pill after an enum value's name (e.g. OldSchool's BETA); y is the text's vertical centre
+    public static void drawEnumBadge(GuiGraphicsExtractor graphics, Object key, float x, float y, float alpha) {
+        String s = getEnumBadge(key);
+        if (s != null) {
+            Widgets.drawBadge(graphics, s, x, y - 5.0F, Theme.getAccentWithAlpha(60), -1, alpha);
         }
     }
 
@@ -1217,7 +1376,7 @@ public final class DashboardScreen extends BaseScreen {
         float f1 = 5.0F;
         float f2 = 5.0F;
         float f3 = integer != null ? 10.0F : 0.0F;
-        float f4 = 0.0F + f3 + Fonts.SMALL.getWidth(s) + 4.0F + 5.0F;
+        float f4 = 0.0F + f3 + Fonts.SMALL.getWidth(s) + getEnumBadgeWidth(property.getValue()) + 4.0F + 5.0F;
         String s1 = springKeyOf(property);
         float f5 = this.springs.computeIfAbsent("dw" + s1, key -> createUiSpring(f4)).target(f4).update();
         float f6 = clamp01(this.getSpring("dc" + s1).target(this.openEnumProp == property && this.enumDropdownOpen ? 1.0F : 0.0F).update());
@@ -1240,6 +1399,7 @@ public final class DashboardScreen extends BaseScreen {
         graphics.pose().pushMatrix();
         graphics.pose().translate(f11 * 2.0F, 0.0F);
         Fonts.SMALL.drawVCentered(graphics, s, f10, value2, ColorUtility.scaleAlpha(ColorUtility.lerpColor(-855638017, -1, Math.max(value3, f6)), value4));
+        drawEnumBadge(graphics, property.getValue(), f10 + Fonts.SMALL.getWidth(s) + 4.0F, value2, value4);
         graphics.pose().popMatrix();
         graphics.pose().pushMatrix();
         graphics.pose().translate(value - 2.5F, value2);
@@ -1265,7 +1425,7 @@ public final class DashboardScreen extends BaseScreen {
                 float f1 = 0.0F;
 
                 for (Enum oenum : aenum) {
-                    f1 = Math.max(f1, Fonts.ROW.getWidth(getEnumDisplayName(oenum)));
+                    f1 = Math.max(f1, Fonts.ROW.getWidth(getEnumDisplayName(oenum)) + getEnumBadgeWidth(oenum));
                 }
 
                 float f15 = Math.max(this.enumTriggerBounds[2] + 20.0F, 12 + (flag ? 12 : 0) + f1 + 26.0F);
@@ -1334,6 +1494,7 @@ public final class DashboardScreen extends BaseScreen {
                         graphics.pose().pushMatrix();
                         graphics.pose().translate(f13 * 1.5F, 0.0F);
                         Fonts.ROW.drawVCentered(graphics, getEnumDisplayName(oenum1), f14, f12, ColorUtility.scaleAlpha(l, f6));
+                        drawEnumBadge(graphics, oenum1, f14 + Fonts.ROW.getWidth(getEnumDisplayName(oenum1)) + 4.0F, f12, f6);
                         graphics.pose().popMatrix();
                         if (flag2) {
                             Fonts.ICONS.drawIconCentered(graphics, "\ue5ca", f17 + f15 - 13.0F, f12, 0.85F, ColorUtility.scaleAlpha(-637534209, f6));
@@ -1664,11 +1825,19 @@ public final class DashboardScreen extends BaseScreen {
     ) {
         float f = this.updateRowHover(key, value, value2, value3, 15.0F, value5, value6);
         renderSettingRowHover(graphics, value, value2, value3, 15.0F, f, value4);
-        Fonts.SMALL
-            .drawVCentered(graphics, Fonts.SMALL.ellipsize(text, value3 - 18.0F - 6.0F), value, value2 + 7.5F, ColorUtility.scaleAlpha(getSettingLabelColor(f), value4));
         float f1 = this.getSpring(key).target(flag ? 1.0F : 0.0F).update();
         Spring spring = this.getClickFlashSpring(key);
-        Widgets.drawSwitch(graphics, value + value3 - 18.0F, value2 + 2.5F, f1, f, clamp01(spring.target(0.0F).update()), value4);
+        if (OldSchoolStyle.active()) {
+            OldSchoolStyle.checkbox(graphics, value, value2 + 4.0F, 7.0F, clamp01(f1), value4);
+            Fonts.SMALL
+                .drawVCentered(graphics, Fonts.SMALL.ellipsize(text, value3 - 11.0F), value + 11.0F, value2 + 7.5F, ColorUtility.scaleAlpha(getSettingLabelColor(f), value4));
+        } else {
+            Fonts.SMALL
+                .drawVCentered(
+                    graphics, Fonts.SMALL.ellipsize(text, value3 - 18.0F - 6.0F), value, value2 + 7.5F, ColorUtility.scaleAlpha(getSettingLabelColor(f), value4)
+                );
+            Widgets.drawSwitch(graphics, value + value3 - 18.0F, value2 + 2.5F, f1, f, clamp01(spring.target(0.0F).update()), value4);
+        }
         this.addClippedHitRegion(value, value2, value3, 15.0F, value5, value6, (button, mouseX, mouseY) -> {
             action.run();
             spring.snap(1.0F);

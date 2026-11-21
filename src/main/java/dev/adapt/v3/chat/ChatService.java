@@ -325,7 +325,7 @@ public final class ChatService {
     public HttpResponse sendRequest(String message, String message2, String message3) throws Exception {
         Builder builder = HttpRequest.newBuilder(URI.create(LaunchGuard.getApiBase() + message2))
             .timeout(Duration.ofSeconds(10L))
-            .header("User-Agent", "adaptv3/3.0.4");
+            .header("User-Agent", "adaptv3/3.1");
         applyAuthHeaders(builder);
         if (message3 != null) {
             builder.header("Content-Type", "application/json").method(message, BodyPublishers.ofString(message3));

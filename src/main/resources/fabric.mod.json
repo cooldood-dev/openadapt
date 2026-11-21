@@ -1,9 +1,9 @@
 {
 	"schemaVersion": 1,
 	"id": "adaptv3",
-	"version": "3.0.4",
+	"version": "3.1",
 	"name": "Adapt+",
-	"description": "Adapt+ v3.0.4",
+	"description": "Adapt+ v3.1",
 	"authors": ["postdevv"],
 	"license": "MIT",
 	"icon": "assets/adaptv3/icon.png",

@@ -87,7 +87,20 @@ public final class Theme {
 
     public static float getBloom() {
         ThemeModule thememodule = getThemeModule();
+        if (thememodule != null && !thememodule.isModern()) {
+            return 0.0F;
+        }
+
         return thememodule == null ? 0.6F : thememodule.bloom.getFloatValue() / 100.0F;
+    }
+
+    public static UiMode getUiMode() {
+        ThemeModule thememodule = getThemeModule();
+        return thememodule == null ? UiMode.MODERN : thememodule.uiMode.getValue();
+    }
+
+    public static boolean isModern() {
+        return getUiMode() == UiMode.MODERN;
     }
 
     public static float getCornerRadius() {

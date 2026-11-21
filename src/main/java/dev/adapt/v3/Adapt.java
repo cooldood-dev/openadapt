@@ -20,6 +20,7 @@ import dev.adapt.v3.feature.module.impl.client.ThemeModule;
 import dev.adapt.v3.feature.module.impl.combat.AutoPotionModule;
 import dev.adapt.v3.feature.module.impl.combat.AutoProjectileModule;
 import dev.adapt.v3.feature.module.impl.combat.BacktrackModule;
+import dev.adapt.v3.feature.module.impl.combat.BedBreakerModule;
 import dev.adapt.v3.feature.module.impl.combat.BlockModule;
 import dev.adapt.v3.feature.module.impl.combat.CriticalsModule;
 import dev.adapt.v3.feature.module.impl.combat.PiercingModule;
@@ -28,9 +29,11 @@ import dev.adapt.v3.feature.module.impl.combat.keepsprint.KeepSprintModule;
 import dev.adapt.v3.feature.module.impl.combat.killaura.KillAuraModule;
 import dev.adapt.v3.feature.module.impl.combat.velocity.VelocityModule;
 import dev.adapt.v3.feature.module.impl.hud.ArmorStatusHud;
+import dev.adapt.v3.feature.module.impl.hud.MediaPlayerHud;
 import dev.adapt.v3.feature.module.impl.hud.ModuleListHud;
 import dev.adapt.v3.feature.module.impl.hud.SpeedometerHud;
 import dev.adapt.v3.feature.module.impl.hud.TabGuiHud;
+import dev.adapt.v3.feature.module.impl.hud.SessionInfoHud;
 import dev.adapt.v3.feature.module.impl.hud.TargetDisplayHud;
 import dev.adapt.v3.feature.module.impl.hud.WatermarkHud;
 import dev.adapt.v3.feature.module.impl.movement.AntiVoidModule;
@@ -76,7 +79,7 @@ import org.slf4j.LoggerFactory;
 
 public final class Adapt implements Listener {
     public static final String NAME = "Adapt+";
-    public static final String VERSION = "3.0.4";
+    public static final String VERSION = "3.1";
     public static final Logger LOGGER = LoggerFactory.getLogger("AdaptV3");
     public static Adapt instance;
     public final NotificationManager notificationManager = new NotificationManager();
@@ -95,12 +98,15 @@ public final class Adapt implements Listener {
         this.moduleManager = ModuleRegistry.of(
             new WatermarkHud(),
             new TabGuiHud(),
+            new SessionInfoHud(),
+            new MediaPlayerHud(),
             new TargetDisplayHud(),
             new SpeedometerHud(),
             new ArmorStatusHud(),
             new ModuleListHud(),
             new KillAuraModule(),
             new BlockModule(),
+            new BedBreakerModule(),
             new VelocityModule(),
             new MovementFixModule(),
             new SpeedModule(),
@@ -155,7 +161,7 @@ public final class Adapt implements Listener {
     public static void init() {
         new Adapt();
         instance.configManager.load();
-        LOGGER.info("{} {} initialised with {} modules", "AdaptV3", "3.0.4", instance.moduleManager.getAll().size());
+        LOGGER.info("{} {} initialised with {} modules", "AdaptV3", "3.1", instance.moduleManager.getAll().size());
     }
 
     public static Adapt getInstance() {

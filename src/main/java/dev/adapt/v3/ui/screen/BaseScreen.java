@@ -72,7 +72,7 @@ public abstract class BaseScreen extends Screen {
     public void extractBackground(GuiGraphicsExtractor graphics, int value, int value2, float value3) {
         float f = this.getOpenProgress();
         this.renderParentOrPanorama(graphics, value3);
-        if (f > 0.05F && !renderingParentBackdrop) {
+        if (Theme.isModern() && f > 0.05F && !renderingParentBackdrop) {
             graphics.blurBeforeThisStratum();
         }
 
@@ -81,7 +81,7 @@ public abstract class BaseScreen extends Screen {
     }
 
     public void renderNebulaOrPanorama(GuiGraphicsExtractor graphics, float value) {
-        if (MenuNebula.isAvailable()) {
+        if (Theme.isModern() && MenuNebula.isAvailable()) {
             MenuNebula.request();
         } else {
             this.extractPanorama(graphics, value);

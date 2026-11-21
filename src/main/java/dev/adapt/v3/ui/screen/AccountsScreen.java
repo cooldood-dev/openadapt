@@ -914,7 +914,14 @@ public final class AccountsScreen extends BaseScreen {
                     )
             );
             Fonts.MEDIUM.drawVCentered(graphics, "Add account", f1 + 50.0F, f5 - 6.0F, ColorUtility.scaleAlpha(-218103809, value));
-            Fonts.SMALL.drawVCentered(graphics, "Microsoft, token or refresh token", f1 + 50.0F, f5 + 7.0F, ColorUtility.scaleAlpha(-2130706433, value));
+            Fonts.SMALL
+                .drawVCentered(
+                    graphics,
+                    Fonts.SMALL.ellipsize("Microsoft, token or refresh", rect.x() + rect.w() - (f1 + 50.0F) - 8.0F),
+                    f1 + 50.0F,
+                    f5 + 7.0F,
+                    ColorUtility.scaleAlpha(-2130706433, value)
+                );
         }
     }
 

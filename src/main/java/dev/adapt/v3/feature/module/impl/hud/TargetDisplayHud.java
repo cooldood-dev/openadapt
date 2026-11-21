@@ -9,6 +9,7 @@ import dev.adapt.v3.hud.HudModule;
 import dev.adapt.v3.ui.render.Fonts;
 import dev.adapt.v3.ui.render.Glass;
 import dev.adapt.v3.ui.render.Render2D;
+import dev.adapt.v3.ui.theme.OldSchoolStyle;
 import dev.adapt.v3.ui.theme.Theme;
 import dev.adapt.v3.util.Displayable;
 import dev.adapt.v3.util.animation.Spring;
@@ -86,9 +87,24 @@ public final class TargetDisplayHud extends HudModule {
         return this.style.getValue() == TargetDisplayHud.Style.CLASSIC;
     }
 
+    public static final float NOVO_HEIGHT = 36.0F;
+    public static final int NOVO_BORDER = 0xB41D1D1D;
+    public static final int NOVO_FILL = 0x88000000;
+    public static final int NOVO_BAR_BG = 0x32000000;
+    public static final int NOVO_BAR = 0xFF00BBFF;
+
     @Override
     public float getWidth() {
+        if (OldSchoolStyle.active()) {
+            return computeNovoWidth(this.getPreviewOrTarget());
+        }
+
         return this.isClassicStyle() ? computeClassicWidth(this.getPreviewOrTarget()) : 136.0F;
+    }
+
+    public static float computeNovoWidth(LivingEntity living) {
+        float f = living == null ? 0.0F : Fonts.ROW.getWidth(living.getName().getString());
+        return 69.0F + f;
     }
 
     public LivingEntity getPreviewOrTarget() {
@@ -114,6 +130,10 @@ public final class TargetDisplayHud extends HudModule {
 
     @Override
     public float getHeight() {
+        if (OldSchoolStyle.active()) {
+            return NOVO_HEIGHT;
+        }
+
         return this.isClassicStyle() ? 39.6F : 40.0F;
     }
 
@@ -171,7 +191,9 @@ public final class TargetDisplayHud extends HudModule {
                 graphics.pose().translate(-f2 / 2.0F, -f3 / 2.0F);
             }
 
-            if (this.isClassicStyle()) {
+            if (OldSchoolStyle.active()) {
+                this.renderNovo(graphics, livingentity, f);
+            } else if (this.isClassicStyle()) {
                 this.renderClassic(graphics, livingentity, f);
             } else {
                 this.renderGlass(graphics, livingentity, f);
@@ -225,6 +247,31 @@ public final class TargetDisplayHud extends HudModule {
                 graphics, 0.0F, 36.05F, f, 3.55F, 6.0F, f * f4, Theme.sampleGradient(0.0F), Theme.sampleGradient(1.0F), 0.7F, value
             );
         }
+    }
+
+    public void renderNovo(GuiGraphicsExtractor graphics, LivingEntity living, float value) {
+        float f = computeNovoWidth(living);
+        float f1 = NOVO_HEIGHT;
+        float f2 = getHealthFraction(living.getHealth(), living);
+        Render2D.fillRect(graphics, 0.0F, 0.0F, f, f1, ColorUtility.scaleAlpha(NOVO_BORDER, value));
+        Render2D.fillRect(graphics, 1.0F, 1.0F, f - 2.0F, f1 - 2.0F, ColorUtility.scaleAlpha(NOVO_FILL, value));
+        if (living instanceof AbstractClientPlayer abstractclientplayer) {
+            Render2D.drawPlayerHead(graphics, abstractclientplayer.getSkin().body().texturePath(), 2.5F, 0.4F, 35.0F, ColorUtility.scaleAlpha(-1, value));
+        } else {
+            Render2D.fillRect(graphics, 2.5F, 0.4F, 35.0F, 35.0F, ColorUtility.scaleAlpha(0xFF2A2A2A, value));
+            Fonts.TITLE.drawIconCentered(graphics, getInitialLetter(living), 20.0F, 18.0F, 1.0F, ColorUtility.scaleAlpha(-1, value));
+        }
+
+        float f3 = f - 49.0F;
+        Fonts.ROW.drawVCentered(graphics, Fonts.ROW.ellipsize(living.getName().getString(), f - 41.0F - 6.0F), 41.0F, 8.0F, ColorUtility.scaleAlpha(-1, value));
+        Render2D.fillRect(graphics, 41.0F, 16.5F, f3, 10.8F, ColorUtility.scaleAlpha(NOVO_BAR_BG, value));
+        float f4 = Math.max(0.0F, Math.min(1.0F, this.healthSpring.target(f2).update()));
+        if (f4 > 0.001F) {
+            Render2D.fillRect(graphics, 41.0F, 16.5F, Math.max(1.0F, f3 * f4), 10.8F, ColorUtility.scaleAlpha(NOVO_BAR, value));
+        }
+
+        String pct = String.format(Locale.ROOT, "%.1f%%", f2 * 100.0F);
+        Fonts.SMALL.drawCentered(graphics, pct, 41.0F + f3 / 2.0F, 16.5F + 5.4F, ColorUtility.scaleAlpha(-1, value));
     }
 
     public static String formatCompactNumber(float value) {

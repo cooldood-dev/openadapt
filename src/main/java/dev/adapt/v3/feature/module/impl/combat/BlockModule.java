@@ -40,8 +40,9 @@ public final class BlockModule extends Module {
     public final BooleanProperty autoBlock = new BooleanProperty("Auto Block", false);
     public final EnumProperty mode = (EnumProperty)new EnumProperty<>("Mode", BlockModule.Mode.ALWAYS).hideIf(() -> !this.autoBlock.getValue());
     public final NumberProperty range = (NumberProperty)new NumberProperty("Range", 3.0, 3.0, 8.0, 0.1)
-        .hideIf(() -> !this.autoBlock.getValue() || this.isLegitMode());
-    public final BooleanProperty requireAttackKey = (BooleanProperty)new BooleanProperty("Require Attack Key", false).hideIf(() -> !this.autoBlock.getValue());
+        .hideIf(() -> !this.autoBlock.getValue() || this.mode.getValue() != BlockModule.Mode.ALWAYS);
+    public final BooleanProperty requireAttackKey = (BooleanProperty)new BooleanProperty("Require Attack Key", false)
+        .hideIf(() -> !this.autoBlock.getValue() || this.isFullMode());
     public final BooleanProperty optimalTiming = (BooleanProperty)new BooleanProperty("Optimal Timing", true)
         .hideIf(() -> !this.autoBlock.getValue() || !this.isLegitMode());
     public final BooleanProperty blink = (BooleanProperty)new BooleanProperty("Blink", false).hideIf(() -> !this.autoBlock.getValue() || !this.isLegitMode());
@@ -75,12 +76,23 @@ public final class BlockModule extends Module {
         return this.mode.getValue() == BlockModule.Mode.LEGIT;
     }
 
+    public boolean isFullMode() {
+        return this.mode.getValue() == BlockModule.Mode.FULL;
+    }
+
+    // Legit and Full share the same input machine (hold right-click, release before every attack); only the gating differs:
+    // Legit blocks when an enemy is aiming at you, Full blocks while any target is within hit range (i.e. while fighting).
+    // Both stay prediction-consistent and pass Grim's MultiActionsA because the block is released before the attack packet.
+    public boolean usesInputBlocking() {
+        return this.isLegitMode() || this.isFullMode();
+    }
+
     public boolean isLegitAutoBlockActive() {
-        return this.isEnabled() && this.autoBlock.getValue() && this.isLegitMode();
+        return this.isEnabled() && this.autoBlock.getValue() && this.usesInputBlocking();
     }
 
     public boolean isBlinkActive() {
-        return this.isLegitAutoBlockActive() && this.blink.getValue();
+        return this.isLegitMode() && this.isEnabled() && this.autoBlock.getValue() && this.blink.getValue();
     }
 
     @Override
@@ -126,7 +138,7 @@ public final class BlockModule extends Module {
     @Subscribe(priority = 1)
     public void onPreTick(PreTickEvent event) {
         renderExtracting = false;
-        if (this.isLegitMode() && this.autoBlock.getValue()) {
+        if (this.usesInputBlocking() && this.autoBlock.getValue()) {
             this.tickLegitBlock();
         } else {
             this.resetLegitState();
@@ -142,17 +154,17 @@ public final class BlockModule extends Module {
     public void tickLegitBlock() {
         this.wasUnblockingForAttack = this.unblockingForAttack;
         this.unblockingForAttack = false;
+        boolean full = this.isFullMode();
         boolean flag = mc.player != null
             && mc.level != null
             && mc.gui.screen() == null
             && !isScaffoldEnabled()
             && !isAutoProjectileActive()
             && this.canBlockWithHeldItems()
-            && (!this.requireAttackKey.getValue() || mc.options.keyAttack.isDown())
-            && this.hasThreateningEnemy();
+            && (full
+                ? this.hasEnemyInRange(false)
+                : (!this.requireAttackKey.getValue() || mc.options.keyAttack.isDown()) && this.hasThreateningEnemy());
         boolean flag1 = !this.wasUnblockingForAttack && flag;
-        this.visualBlocking = flag;
-        this.visualBlockTicks = flag ? this.visualBlockTicks + 1 : 0;
         if (flag && mc.player.isUsingItem() && mc.player.getUseItem().getUseAnimation() == ItemUseAnimation.BLOCK) {
             this.visualHand = mc.player.getUsedItemHand();
         }
@@ -166,6 +178,12 @@ public final class BlockModule extends Module {
         }
 
         this.setHoldingUse(flag1);
+        // Latch the visual block through the one-tick release-for-attack (and any brief gap in the block decision) so the pose
+        // never flickers off mid-fight, and keep the use-tick counter climbing - capped at the shield's use duration - so the
+        // Animations block style holds full progress instead of restarting its slide-in on every swing.
+        boolean flag2 = flag || this.holdingUse || this.wasUnblockingForAttack;
+        this.visualBlocking = flag2;
+        this.visualBlockTicks = flag2 ? Math.min(this.visualBlockTicks + 1, 72000) : 0;
     }
 
     @Subscribe(priority = -10)
@@ -279,10 +297,15 @@ public final class BlockModule extends Module {
     }
 
     public boolean hasThreateningEnemy() {
-        boolean flag = this.optimalTiming.getValue();
+        return this.hasEnemyInRange(this.optimalTiming.getValue());
+    }
+
+    // Full mode calls this with requireAiming = false: block whenever a target is within hit range (i.e. while you're
+    // actually fighting), not permanently. Legit passes the Optimal Timing value so it only blocks when they aim at you.
+    public boolean hasEnemyInRange(boolean requireAiming) {
         AABB aabb = mc.player.getBoundingBox();
         this.playerBox.set(aabb.minX, aabb.minY, aabb.minZ, aabb.maxX, aabb.maxY, aabb.maxZ);
-        if (flag) {
+        if (requireAiming) {
             this.expandedPlayerBox
                 .set(this.playerBox.minX, this.playerBox.minY, this.playerBox.minZ, this.playerBox.maxX, this.playerBox.maxY, this.playerBox.maxZ)
                 .inflate(0.4);
@@ -293,7 +316,7 @@ public final class BlockModule extends Module {
                 Player player = (Player)playertarget.getEntity();
                 if (player.isAlive() && !player.isSpectator()) {
                     double d0 = player.entityInteractionRange();
-                    if (this.playerBox.distanceTo(player.getX(), player.getEyeY(), player.getZ()) <= d0 && (!flag || this.isEnemyAimingAtUs(player, d0))) {
+                    if (this.playerBox.distanceTo(player.getX(), player.getEyeY(), player.getZ()) <= d0 && (!requireAiming || this.isEnemyAimingAtUs(player, d0))) {
                         return true;
                     }
                 }
@@ -333,6 +356,14 @@ public final class BlockModule extends Module {
         return blockmodule != null && blockmodule.isLegitAutoBlockActive() && blockmodule.legitBlocking;
     }
 
+    // true on the frames legit autoblock is itself releasing the block to swing, so NoSlow leaves the use-item alone and doesn't double up
+    public static boolean isUnblockingForAttack() {
+        BlockModule blockmodule = getInstance();
+        return blockmodule != null
+            && blockmodule.isLegitAutoBlockActive()
+            && (blockmodule.unblockingForAttack || blockmodule.wasUnblockingForAttack);
+    }
+
     public static BlockModule getInstance() {
         Adapt adapt = Adapt.getInstance();
         return adapt == null ? null : adapt.getModuleManager().getByClass(BlockModule.class);
@@ -358,7 +389,8 @@ public final class BlockModule extends Module {
 
     public enum Mode implements Displayable {
         ALWAYS("Always"),
-        LEGIT("Legit");
+        LEGIT("Legit"),
+        FULL("Full");
 
         public final String displayName;
 

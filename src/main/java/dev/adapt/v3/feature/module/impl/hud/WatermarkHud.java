@@ -1,14 +1,15 @@
 package dev.adapt.v3.feature.module.impl.hud;
 
-import java.util.List;
 import dev.adapt.v3.feature.property.impl.BooleanProperty;
 import dev.adapt.v3.hud.HudModule;
 import dev.adapt.v3.ui.render.Fonts;
 import dev.adapt.v3.ui.render.Glass;
 import dev.adapt.v3.ui.render.Render2D;
+import dev.adapt.v3.ui.theme.OldSchoolStyle;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 public final class WatermarkHud extends HudModule {
@@ -22,8 +23,15 @@ public final class WatermarkHud extends HudModule {
     public static final int VALUE_COLOR = -637534209;
     public static final int UNIT_COLOR = -2130706433;
     public static final int DIVIDER_COLOR = 536870911;
-    public static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+    public static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("hh:mm");
     public static final String BRAND_TEXT = "Adapt+";
+    public static final String VERSION = "3.1";
+    // Novo 2 colours, sampled from the reference
+    public static final int NOVO_BOX = 0x7B151515;
+    public static final int NOVO_TOP_LINE = 0xFF97A4B4;
+    public static final int NOVO_WHITE = 0xFFFFFFFF;
+    public static final int NOVO_GREY = 0xFFAAAAAA;
+    public static final int NOVO_SHADOW = 0xFF2A2A2A;
 
     public WatermarkHud() {
         super("Watermark", "Adapt+ capsule with FPS and the time.", 0.006F, 0.01F);
@@ -38,6 +46,10 @@ public final class WatermarkHud extends HudModule {
 
     @Override
     public float getWidth() {
+        if (OldSchoolStyle.active()) {
+            return this.novoWidth();
+        }
+
         float f = 9.0F + Fonts.MEDIUM.getWidth(BRAND_TEXT);
 
         for (String[] astring : this.buildSegments()) {
@@ -49,7 +61,33 @@ public final class WatermarkHud extends HudModule {
 
     @Override
     public float getHeight() {
-        return 18.0F;
+        return OldSchoolStyle.active() ? this.novoHeight() : 18.0F;
+    }
+
+    // Novo 2 layout: "Adapt+ (hh:mm) - 3.1 Build", brackets grey, the rest white
+    public String[][] novoSegments() {
+        String time = LocalTime.now().format(TIME_FORMATTER);
+        return new String[][]{
+            {BRAND_TEXT + " ", "w"},
+            {"(", "g"},
+            {time, "w"},
+            {")", "g"},
+            {" - " + VERSION + " Build", "w"}
+        };
+    }
+
+    public float novoWidth() {
+        float f = 4.0F;
+
+        for (String[] astring : this.novoSegments()) {
+            f += Fonts.MEDIUM.getWidth(astring[0]);
+        }
+
+        return f;
+    }
+
+    public float novoHeight() {
+        return Fonts.MEDIUM.getLineHeight() * 1.5F;
     }
 
     public String[][] buildSegments() {
@@ -71,6 +109,11 @@ public final class WatermarkHud extends HudModule {
 
     @Override
     public void render(GuiGraphicsExtractor graphics, float partialTick, boolean editing) {
+        if (OldSchoolStyle.active()) {
+            this.renderNovo(graphics);
+            return;
+        }
+
         float f = this.getWidth();
         float f1 = 9.0F;
         Glass.drawBorderlessPanel(graphics, 0.0F, 0.0F, f, 18.0F, 9.0F, 1.0F, 0.55F, 1.0F, -2146694128);
@@ -88,6 +131,22 @@ public final class WatermarkHud extends HudModule {
             }
 
             f2 += measureSegment(astring);
+        }
+    }
+
+    private void renderNovo(GuiGraphicsExtractor graphics) {
+        float w = this.novoWidth();
+        float h = this.novoHeight();
+        Render2D.fillRect(graphics, 0.0F, 0.0F, w, h, NOVO_BOX);
+        Render2D.fillRect(graphics, 0.0F, 0.0F, w, 1.0F, NOVO_TOP_LINE);
+        float x = 2.0F;
+        float cy = h / 2.0F;
+
+        for (String[] astring : this.novoSegments()) {
+            int color = astring[1].equals("g") ? NOVO_GREY : NOVO_WHITE;
+            Fonts.MEDIUM.drawVCentered(graphics, astring[0], x + 1.0F, cy + 1.0F, NOVO_SHADOW);
+            Fonts.MEDIUM.drawVCentered(graphics, astring[0], x, cy, color);
+            x += Fonts.MEDIUM.getWidth(astring[0]);
         }
     }
 }

@@ -1,6 +1,7 @@
 package dev.adapt.v3.notification;
 
 import dev.adapt.v3.Adapt;
+import dev.adapt.v3.feature.module.impl.client.NotificationsModule;
 import dev.adapt.v3.ui.render.Fonts;
 import dev.adapt.v3.ui.render.Glass;
 import dev.adapt.v3.ui.render.Render2D;
@@ -22,7 +23,6 @@ public final class NotificationRenderer {
     public static final float BAR_Y = 29.5F;
     public static final float ICON_RADIUS = 10.0F;
     public static final float SCREEN_MARGIN = 6.0F;
-    public static final float SCALE = 0.9F;
     public static final float DASHBOARD_OFFSET_Y = 56.0F;
     public static final Spring dashboardOffsetSpring = new Spring(0.0F, 300.0F, 34.6F);
     public static final float BAR_HEIGHT = 2.0F;
@@ -34,7 +34,8 @@ public final class NotificationRenderer {
         if (!list.isEmpty()) {
             graphics.pose().pushMatrix();
             graphics.pose().translate(graphics.guiWidth() - 6.0F, graphics.guiHeight() - 6.0F - f);
-            graphics.pose().scale(0.9F, 0.9F);
+            float scale = NotificationsModule.getScale();
+            graphics.pose().scale(scale, scale);
             graphics.pose().translate(-160.0F, -38.0F);
             Fonts.setNativeTransformScale(true);
 

@@ -9,6 +9,7 @@ import dev.adapt.v3.hud.HudModule;
 import dev.adapt.v3.ui.render.Fonts;
 import dev.adapt.v3.ui.render.Glass;
 import dev.adapt.v3.ui.render.Render2D;
+import dev.adapt.v3.ui.theme.OldSchoolStyle;
 import dev.adapt.v3.ui.theme.Theme;
 import dev.adapt.v3.util.animation.Spring;
 import dev.adapt.v3.util.render.ColorUtility;
@@ -68,6 +69,11 @@ public final class TabGuiHud extends HudModule {
     }
 
     @Override
+    public boolean shouldRender() {
+        return !OldSchoolStyle.active();
+    }
+
+    @Override
     public float getWidth() {
         return 98.0F;
     }
@@ -123,6 +129,11 @@ public final class TabGuiHud extends HudModule {
 
     @Override
     public void render(GuiGraphicsExtractor graphics, float partialTick, boolean editing) {
+        if (OldSchoolStyle.active()) {
+            this.renderOldSchool(graphics);
+            return;
+        }
+
         ModuleCategory[] amodulecategory = ModuleCategory.VALUES;
         float f = this.getHeight();
         Glass.drawBorderlessPanel(graphics, 0.0F, 0.0F, 98.0F, f, 9.0F, 1.0F, 0.55F, 1.0F, -2146694128);
@@ -189,6 +200,40 @@ public final class TabGuiHud extends HudModule {
                 if (f15 > 0.01F) {
                     Fonts.MEDIUM.drawVCentered(graphics, module1.getName(), f10, f7, ColorUtility.scaleAlpha(-1, f11 * f15));
                 }
+            }
+        }
+    }
+
+    public void renderOldSchool(GuiGraphicsExtractor graphics) {
+        ModuleCategory[] amodulecategory = ModuleCategory.VALUES;
+        OldSchoolStyle.panel(graphics, 0.0F, 0.0F, 98.0F, this.getHeight(), 1.0F);
+        float f = this.categoryCursorSpring.target(this.selectedCategoryIndex * ROW_HEIGHT).update();
+        Render2D.fillRect(graphics, 0.0F, f, 98.0F, ROW_HEIGHT, OldSchoolStyle.HEADER_BG);
+
+        for (int i = 0; i < amodulecategory.length; i++) {
+            int j = i == this.selectedCategoryIndex ? OldSchoolStyle.TEXT_ON : OldSchoolStyle.SETTING;
+            Fonts.REGULAR.drawVCentered(graphics, amodulecategory[i].getDisplayName(), 6.0F, i * ROW_HEIGHT + ROW_HEIGHT / 2.0F, j);
+        }
+
+        float f1 = Math.max(0.0F, Math.min(1.0F, this.expandSpring.target(this.expanded ? 1.0F : 0.0F).update()));
+        if (!(f1 < 0.02F)) {
+            List<Module> list = this.getSelectedCategoryModules();
+            float f2 = 70.0F;
+
+            for (Module module : list) {
+                f2 = Math.max(f2, Fonts.REGULAR.getWidth(module.getName()) + 16.0F);
+            }
+
+            float f3 = 100.0F;
+            float f4 = this.selectedCategoryIndex * ROW_HEIGHT;
+            OldSchoolStyle.panel(graphics, f3, f4, f2, list.size() * ROW_HEIGHT, f1);
+            float f5 = this.moduleCursorSpring.target(this.selectedModuleIndex * ROW_HEIGHT).update();
+            Render2D.fillRect(graphics, f3, f4 + f5, f2, ROW_HEIGHT, ColorUtility.scaleAlpha(OldSchoolStyle.HEADER_BG, f1));
+
+            for (int k = 0; k < list.size(); k++) {
+                Module module1 = list.get(k);
+                int l = module1.isEnabled() ? OldSchoolStyle.TEXT_ON : OldSchoolStyle.TEXT_OFF;
+                Fonts.REGULAR.drawVCentered(graphics, module1.getName(), f3 + 6.0F, f4 + k * ROW_HEIGHT + ROW_HEIGHT / 2.0F, ColorUtility.scaleAlpha(l, f1));
             }
         }
     }

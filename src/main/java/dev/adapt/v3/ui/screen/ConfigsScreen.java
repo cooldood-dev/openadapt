@@ -2,6 +2,7 @@ package dev.adapt.v3.ui.screen;
 
 import dev.adapt.v3.Adapt;
 import dev.adapt.v3.config.ConfigManager;
+import dev.adapt.v3.config.OnlineConfigs;
 import dev.adapt.v3.notification.NotificationType;
 import dev.adapt.v3.ui.render.Fonts;
 import dev.adapt.v3.ui.render.Glass;
@@ -79,10 +80,17 @@ public final class ConfigsScreen extends BaseScreen {
     public final Map<String, Long> loadedShimmerTimes = new HashMap<>();
     public static final String[] CTX_LABELS = new String[]{"Load", "Overwrite", "Delete"};
     public static final String[] CTX_ICONS = new String[]{"\ue5ca", "\ue161", "\ue872"};
+    // 0 = Local (saved/downloaded), 1 = Online (the adapt-config repo)
+    public int activeTab;
+    public ConfigsScreen.Rect tabLocalRect = ConfigsScreen.Rect.NONE;
+    public ConfigsScreen.Rect tabOnlineRect = ConfigsScreen.Rect.NONE;
+    public final List<ConfigsScreen.Rect> onlineRowRects = new ArrayList<>();
+    public final List<String> visibleOnlineNames = new ArrayList<>();
 
     public ConfigsScreen(Screen screen) {
         super("Configs", screen);
         this.refreshConfigs();
+        OnlineConfigs.getInstance().refresh(false);
     }
 
     @Override
@@ -136,26 +144,45 @@ public final class ConfigsScreen extends BaseScreen {
             this.refreshConfigs();
         }
 
+        OnlineConfigs online = OnlineConfigs.getInstance();
+        boolean localTab = this.activeTab == 0;
+        if (!localTab) {
+            online.refresh(false);
+        }
+
         boolean flag = this.activeConfirm != ConfigsScreen.Confirm.NONE || this.contextConfigName != null;
         int i = flag ? -1000 : mouseX;
         int j = flag ? -1000 : mouseY;
-        int k = this.configNames.size();
+        int k = localTab ? this.configNames.size() : online.getNames().size();
         float f = Math.min(Math.max(k, 2), 5) * 41.0F - 5.0F;
-        float f1 = 70.0F + f + 12.0F - 2.0F;
+        float f5 = 34.0F + 6.0F + 24.0F + 6.0F + (localTab ? 30.0F : 0.0F);
+        float f1 = f5 + f + 12.0F;
         f1 = Math.min(f1, this.height - 60);
         float f2 = Render2D.snapToPixel(this.width / 2.0F - 140.0F);
         float f3 = Render2D.snapToPixel(this.height / 2.0F - f1 / 2.0F + (1.0F - alpha) * 10.0F);
         this.panelRect = new ConfigsScreen.Rect(f2, f3, 280.0F, f1);
         Glass.drawBorderlessPanel(graphics, f2, f3, 280.0F, f1, 10.0F, alpha, 0.55F, 1.0F, -1509159920);
         this.renderHeader(graphics, f2, f3, i, j, alpha, k);
-        this.renderSaveBar(graphics, f2, f3 + 34.0F + 6.0F, i, j, alpha);
-        this.renderConfigList(graphics, f2, f3 + 34.0F + 6.0F + 22.0F + 8.0F, Math.min(f, f1 - 70.0F - 12.0F + 4.0F), i, j, alpha);
-        String s = "Click to load   ·   Right-click for more   ·   Esc to go back";
+        float f6 = f3 + 34.0F + 6.0F;
+        this.renderTabs(graphics, f2, f6, i, j, alpha);
+        f6 += 24.0F + 6.0F;
+        if (localTab) {
+            this.renderSaveBar(graphics, f2, f6, i, j, alpha);
+            f6 += 30.0F;
+        }
+
+        float f7 = Math.max(0.0F, f1 - (f6 - f3) - 12.0F);
+        if (localTab) {
+            this.renderConfigList(graphics, f2, f6, f7, i, j, alpha);
+        } else {
+            this.renderOnlineList(graphics, f2, f6, f7, i, j, alpha);
+        }
+
         float f4 = this.minecraft.level != null ? this.height - 62 : this.height - 16;
-        Fonts.SMALL
-            .drawCenteredX(
-                graphics, "Click to load   ·   Right-click for more   ·   Esc to go back", this.width / 2.0F, f4, ColorUtility.scaleAlpha(1946157055, alpha)
-            );
+        String s = localTab
+            ? "Click to load   ·   Right-click for more   ·   Esc to go back"
+            : "Click to download & load   ·   Esc to go back";
+        Fonts.SMALL.drawCenteredX(graphics, s, this.width / 2.0F, f4, ColorUtility.scaleAlpha(1946157055, alpha));
         this.renderContextMenu(graphics, mouseX, mouseY, alpha);
         this.renderConfirmModal(graphics, mouseX, mouseY, alpha);
     }
@@ -506,6 +533,172 @@ public final class ConfigsScreen extends BaseScreen {
         }
     }
 
+    public void renderTabs(GuiGraphicsExtractor graphics, float value, float value2, int value3, int value4, float value5) {
+        float f = value + 12.0F;
+        float f1 = (256.0F - 6.0F) / 2.0F;
+        this.tabLocalRect = new ConfigsScreen.Rect(f, value2, f1, 22.0F);
+        this.tabOnlineRect = new ConfigsScreen.Rect(f + f1 + 6.0F, value2, f1, 22.0F);
+        this.drawTab(graphics, this.tabLocalRect, "Local", this.activeTab == 0, value3, value4, value5);
+        this.drawTab(graphics, this.tabOnlineRect, "Online", this.activeTab == 1, value3, value4, value5);
+    }
+
+    public void drawTab(GuiGraphicsExtractor graphics, ConfigsScreen.Rect rect, String label, boolean active, int value, int value2, float value3) {
+        float f = clamp01(this.getSpring("tab" + label).target(rect.contains(value, value2) ? 1.0F : 0.0F).update());
+        float f1 = clamp01(this.getSpring("tabon" + label).target(active ? 1.0F : 0.0F).update());
+        Render2D.fillSubpixelRoundedRect(
+            graphics, rect.x(), rect.y(), rect.w(), rect.h(), 6.0F, ColorUtility.scaleAlpha(ColorUtility.lerpColor(184549375, 318767103, f * 0.6F), value3)
+        );
+        if (f1 > 0.01F) {
+            if (Theme.hasGradient()) {
+                Render2D.fillHorizontalRoundedGradient(
+                    graphics,
+                    rect.x(),
+                    rect.y(),
+                    rect.w(),
+                    rect.h(),
+                    6.0F,
+                    ColorUtility.withAlpha(Theme.sampleGradient(0.0F), 60),
+                    ColorUtility.withAlpha(Theme.sampleGradient(1.0F), 60),
+                    value3 * f1
+                );
+            } else {
+                Render2D.fillSubpixelRoundedRect(graphics, rect.x(), rect.y(), rect.w(), rect.h(), 6.0F, ColorUtility.scaleAlpha(Theme.getAccentWithAlpha(60), value3 * f1));
+            }
+
+            Render2D.drawRoundedBorderTextured(
+                graphics, rect.x(), rect.y(), rect.w(), rect.h(), 6.0F, 1.0F, ColorUtility.scaleAlpha(Theme.getAccentWithAlpha(120), value3 * f1)
+            );
+        }
+
+        int i = ColorUtility.lerpColor(ColorUtility.lerpColor(-1493172225, -1, f), -1, f1);
+        Fonts.MEDIUM.drawCentered(graphics, label, rect.x() + rect.w() / 2.0F, rect.y() + rect.h() / 2.0F, ColorUtility.scaleAlpha(i, value3));
+    }
+
+    public void renderOnlineList(GuiGraphicsExtractor graphics, float value, float value2, float value3, int value4, int value5, float value6) {
+        this.listViewportRect = new ConfigsScreen.Rect(value, value2, 280.0F, value3);
+        this.onlineRowRects.clear();
+        this.visibleOnlineNames.clear();
+        OnlineConfigs online = OnlineConfigs.getInstance();
+        List<String> list = online.getNames();
+        if (list.isEmpty()) {
+            float f20 = value + 140.0F;
+            float f21 = value2 + value3 / 2.0F;
+            OnlineConfigs.State state = online.getState();
+            String s = state == OnlineConfigs.State.LOADING
+                ? "Loading online configs…"
+                : (state == OnlineConfigs.State.ERROR ? "Couldn't reach adapt-config" : "No online configs");
+            String s1 = state == OnlineConfigs.State.ERROR ? "Click Online again to retry" : "From the adapt-config repo";
+            Render2D.fillCircleAligned(graphics, f20, f21 - 14.0F, 11.0F, ColorUtility.scaleAlpha(268435455, value6));
+            Fonts.ICONS.drawIconCentered(graphics, "", f20, f21 - 14.0F, 1.0F, ColorUtility.scaleAlpha(1728053247, value6));
+            Fonts.SMALL.drawCentered(graphics, s, f20, f21 + 6.0F, ColorUtility.scaleAlpha(-1275068417, value6));
+            Fonts.SMALL.drawCentered(graphics, s1, f20, f21 + 17.0F, ColorUtility.scaleAlpha(1509949439, value6));
+            return;
+        }
+
+        float f = Math.max(0.0F, list.size() * 41.0F - 5.0F - value3);
+        this.scrollTarget = Math.max(0.0F, Math.min(f, this.scrollTarget));
+        float f1 = this.scrollSpring.target(this.scrollTarget).update();
+        boolean flag = value5 >= value2 && value5 < value2 + value3;
+        graphics.enableScissor((int)value, (int)value2, (int)Math.ceil(value + 280.0F), (int)Math.ceil(value2 + value3));
+
+        for (int i = 0; i < list.size(); i++) {
+            String s2 = list.get(i);
+            float f2 = clamp01(value6 * 1.6F - i * 0.08F);
+            float f3 = value2 + i * 41.0F - f1 + (1.0F - f2) * 6.0F;
+            if (!(f3 + 36.0F < value2) && !(f3 > value2 + value3)) {
+                float f4 = value6 * f2;
+                float f5 = value + 12.0F - 2.0F;
+                ConfigsScreen.Rect configsscreen$rect = new ConfigsScreen.Rect(f5, f3, 260.0F, 36.0F);
+                boolean flag1 = flag && configsscreen$rect.contains(value4, value5);
+                boolean flag2 = this.configManager.exists(s2);
+                boolean flag3 = online.isDownloading(s2);
+                float f7 = clamp01(this.getSpring("orow" + s2).target(flag1 ? 1.0F : 0.0F).update());
+                float f10 = f3 + 18.0F;
+                Render2D.fillSubpixelRoundedRect(
+                    graphics, f5, f3, 260.0F, 36.0F, 7.0F, ColorUtility.scaleAlpha(ColorUtility.lerpColor(150994943, 318767103, f7), f4)
+                );
+                Render2D.drawRoundedBorderTextured(
+                    graphics, f5, f3, 260.0F, 36.0F, 7.0F, 1.0F, ColorUtility.scaleAlpha(ColorUtility.lerpColor(452984831, 654311423, f7), f4)
+                );
+                float f26 = f5 + 7.0F;
+                float f27 = f10 - 11.0F;
+                Render2D.fillSubpixelRoundedRect(
+                    graphics, f26, f27, 22.0F, 22.0F, 6.0F, ColorUtility.scaleAlpha(ColorUtility.lerpColor(352321535, 536870911, f7), f4)
+                );
+                Fonts.MEDIUM
+                    .drawCentered(
+                        graphics, s2.substring(0, 1).toUpperCase(Locale.ROOT), f26 + 11.0F, f10, ColorUtility.scaleAlpha(ColorUtility.lerpColor(-855638017, -1, f7), f4)
+                    );
+                String s3 = flag3 ? "Downloading…" : (flag2 ? "Update" : "Get");
+                float f28 = f5 + 260.0F - 8.0F;
+                float f29 = Fonts.SMALL.getWidth(s3) + 18.0F;
+                float f30 = f28 - f29;
+                Render2D.fillSubpixelRoundedRect(graphics, f30, f10 - 8.0F, f29, 16.0F, 7.0F, ColorUtility.scaleAlpha(Theme.getAccentWithAlpha(flag3 ? 40 : 71), f4));
+                Fonts.SMALL.drawCentered(graphics, s3, f30 + f29 / 2.0F, f10, ColorUtility.scaleAlpha(-1, f4));
+                float f19 = f26 + 22.0F + 9.0F;
+                float f20 = f30 - 6.0F - f19;
+                graphics.pose().pushMatrix();
+                graphics.pose().translate(f7 * 1.5F, 0.0F);
+                Fonts.MEDIUM
+                    .drawVCentered(
+                        graphics, Fonts.MEDIUM.ellipsize(s2, f20), f19, f10 - 5.5F, ColorUtility.scaleAlpha(ColorUtility.lerpColor(-419430401, -1, f7), f4)
+                    );
+                Fonts.SMALL
+                    .drawVCentered(
+                        graphics, flag2 ? "Downloaded  ·  adapt-config" : "adapt-config", f19, f10 + 6.0F, ColorUtility.scaleAlpha(1728053247, f4)
+                    );
+                graphics.pose().popMatrix();
+                this.onlineRowRects.add(configsscreen$rect);
+                this.visibleOnlineNames.add(s2);
+            }
+        }
+
+        graphics.disableScissor();
+        if (f > 0.0F) {
+            float f23 = value3 - 4.0F;
+            float f24 = Math.max(14.0F, f23 * value3 / (list.size() * 41.0F));
+            Render2D.fillRoundedRect(
+                graphics, value + 280.0F - 3.5F, value2 + 2.0F + (f23 - f24) * (f1 / f), 1.5F, f24, 0.75F, ColorUtility.scaleAlpha(872415231, value6)
+            );
+        }
+    }
+
+    public void switchTab(int tab) {
+        if (this.activeTab != tab) {
+            this.activeTab = tab;
+            this.scrollTarget = 0.0F;
+            this.scrollSpring.snap(0.0F);
+            this.inputFocused = false;
+        }
+
+        if (tab == 1) {
+            OnlineConfigs online = OnlineConfigs.getInstance();
+            online.refresh(online.getState() == OnlineConfigs.State.ERROR);
+        }
+    }
+
+    public void downloadAndLoad(String name) {
+        OnlineConfigs online = OnlineConfigs.getInstance();
+        if (online.isDownloading(name)) {
+            return;
+        }
+
+        online.download(name).whenComplete((ok, error) -> this.minecraft.execute(() -> {
+            if (Boolean.TRUE.equals(ok)) {
+                this.refreshConfigs();
+                if (this.configManager.loadConfig(name)) {
+                    notifyToast(NotificationType.SUCCESS, "Downloaded & loaded", name);
+                    this.triggerLoadShimmer(name);
+                    this.switchTab(0);
+                } else {
+                    notifyToast(NotificationType.ERROR, "Couldn't load", name);
+                }
+            } else {
+                notifyToast(NotificationType.ERROR, "Couldn't download", name);
+            }
+        }));
+    }
+
     public void openContextMenu(String text, double first, double second) {
         this.contextConfigName = text;
         float f = CTX_LABELS.length * 19.0F + 8.0F;
@@ -746,6 +939,36 @@ public final class ConfigsScreen extends BaseScreen {
                 if (i != 3) {
                     return true;
                 }
+            }
+
+            if (this.tabLocalRect.contains(d0, d1)) {
+                this.switchTab(0);
+                return true;
+            }
+
+            if (this.tabOnlineRect.contains(d0, d1)) {
+                this.switchTab(1);
+                return true;
+            }
+
+            if (this.activeTab == 1) {
+                if (this.listViewportRect.contains(d0, d1)) {
+                    for (int k = 0; k < this.onlineRowRects.size(); k++) {
+                        if (this.onlineRowRects.get(k).contains(d0, d1)) {
+                            if (i == 1) {
+                                this.downloadAndLoad(this.visibleOnlineNames.get(k));
+                            }
+
+                            return true;
+                        }
+                    }
+                }
+
+                if (!this.panelRect.contains(d0, d1) && i == 1) {
+                    this.onClose();
+                }
+
+                return true;
             }
 
             this.inputFocused = this.inputRect.contains(d0, d1);

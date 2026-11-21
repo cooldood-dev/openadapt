@@ -1,5 +1,6 @@
 package dev.adapt.v3.ui.render;
 
+import dev.adapt.v3.ui.theme.Theme;
 import dev.adapt.v3.util.render.ColorUtility;
 import java.awt.Font;
 import java.io.InputStream;
@@ -172,11 +173,12 @@ public enum Fonts {
     ) {
         if (text != null && !text.isEmpty()) {
             int i = getGuiScale();
-            if (ColorUtility.getAlpha(value5) >= 4) {
+            boolean flag = Theme.isModern();
+            if (flag && ColorUtility.getAlpha(value5) >= 4) {
                 this.drawGlyphs(graphics, (first, second) -> this.getBlurredPage(first, Math.round(value6 * i * second)), text, value, value2, value3, value5);
             }
 
-            if (ColorUtility.getAlpha(value7) >= 4) {
+            if (flag && ColorUtility.getAlpha(value7) >= 4) {
                 this.drawGlyphs(graphics, (first2, second2) -> this.getBlurredPage(first2, Math.round(value10 * i * second2)), text, value + value8, value2 + value9, value3, value7);
             }
 
@@ -189,7 +191,7 @@ public enum Fonts {
     }
 
     public void drawCachedBlurred(GuiGraphicsExtractor graphics, String text, float value, float value2, int value3, float value4) {
-        if (text != null && !text.isEmpty() && ColorUtility.getAlpha(value3) >= 4) {
+        if (Theme.isModern() && text != null && !text.isEmpty() && ColorUtility.getAlpha(value3) >= 4) {
             int i = getGuiScale();
             this.drawInternal(graphics, (first, second) -> this.getBlurredPage(first, Math.round(value4 * i * second)), text, value, value2, 1.0F, value3, true);
         }

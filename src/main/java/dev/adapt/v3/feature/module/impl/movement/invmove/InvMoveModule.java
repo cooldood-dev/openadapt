@@ -3,6 +3,7 @@ package dev.adapt.v3.feature.module.impl.movement.invmove;
 import dev.adapt.v3.Adapt;
 import dev.adapt.v3.feature.module.Module;
 import dev.adapt.v3.feature.module.ModuleCategory;
+import dev.adapt.v3.feature.module.impl.movement.invmove.mode.LegitInvMove;
 import dev.adapt.v3.feature.module.impl.movement.invmove.mode.VanillaInvMove;
 import dev.adapt.v3.feature.module.mode.ModuleMode;
 import dev.adapt.v3.feature.property.impl.EnumProperty;
@@ -19,7 +20,7 @@ public final class InvMoveModule extends Module {
     public InvMoveModule() {
         super("Inv Move", "Lets you move while an inventory or menu is open.", ModuleCategory.MOVEMENT);
         this.addProperties(this.mode);
-        this.registerModes(new VanillaInvMove(this));
+        this.registerModes(new VanillaInvMove(this), new LegitInvMove(this));
     }
 
     @SafeVarargs
@@ -76,7 +77,8 @@ public final class InvMoveModule extends Module {
     }
 
     public enum Mode implements Displayable {
-        VANILLA("Vanilla");
+        VANILLA("Vanilla"),
+        LEGIT("Legit");
 
         public final String displayName;
 

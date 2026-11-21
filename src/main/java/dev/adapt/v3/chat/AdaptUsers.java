@@ -66,7 +66,7 @@ public final class AdaptUsers implements Listener {
     public static CompletableFuture<List<AdaptUsers.OnlineUser>> fetchOnlineUsers() {
         Builder builder = HttpRequest.newBuilder(URI.create(LaunchGuard.getApiBase() + "/api/client/online"))
             .timeout(Duration.ofSeconds(10L))
-            .header("User-Agent", "adaptv3/3.0.4")
+            .header("User-Agent", "adaptv3/3.1")
             .GET();
 
         try {
@@ -128,7 +128,7 @@ public final class AdaptUsers implements Listener {
                 jsonobject.add("uuids", jsonarray);
                 Builder builder = HttpRequest.newBuilder(URI.create(LaunchGuard.getApiBase() + "/api/client/players"))
                     .timeout(Duration.ofSeconds(10L))
-                    .header("User-Agent", "adaptv3/3.0.4")
+                    .header("User-Agent", "adaptv3/3.1")
                     .header("Content-Type", "application/json")
                     .POST(BodyPublishers.ofString(jsonobject.toString()));
 
@@ -187,7 +187,7 @@ public final class AdaptUsers implements Listener {
                         jsonobject.addProperty("name", user.getName());
                         Builder builder = HttpRequest.newBuilder(URI.create(LaunchGuard.getApiBase() + "/api/client/players/verify"))
                             .timeout(Duration.ofSeconds(15L))
-                            .header("User-Agent", "adaptv3/3.0.4")
+                            .header("User-Agent", "adaptv3/3.1")
                             .header("Content-Type", "application/json")
                             .POST(BodyPublishers.ofString(jsonobject.toString()));
                         ChatService.applyAuthHeaders(builder);

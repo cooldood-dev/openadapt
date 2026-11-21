@@ -394,7 +394,7 @@ public final class Render2D {
     }
 
     public static void drawDropShadow(GuiGraphicsExtractor graphics, float x, float y, float width, float height, float radius, float value, int color) {
-        if (ColorUtility.getAlpha(color) != 0 && !(width <= 0.0F) && !(height <= 0.0F)) {
+        if (Theme.isModern() && ColorUtility.getAlpha(color) != 0 && !(width <= 0.0F) && !(height <= 0.0F)) {
             int i = getGuiScale();
             int j = toPx(x, i);
             int k = toPx(y, i);
@@ -426,7 +426,7 @@ public final class Render2D {
     }
 
     public static void drawMultiRectBloom(GuiGraphicsExtractor graphics, String text, float[][] floatArrays, float[][] floatArrays2, int value) {
-        if (ColorUtility.getAlpha(value) != 0 && floatArrays.length != 0 && floatArrays2.length != 0) {
+        if (Theme.isModern() && ColorUtility.getAlpha(value) != 0 && floatArrays.length != 0 && floatArrays2.length != 0) {
             int i = getGuiScale();
             float[][] afloat = new float[floatArrays2.length][];
             int j = 1;
@@ -516,7 +516,7 @@ public final class Render2D {
     }
 
     public static void drawBlob(GuiGraphicsExtractor graphics, float x, float y, float width, float height, int color) {
-        if (ColorUtility.getAlpha(color) != 0 && !(width <= 0.0F) && !(height <= 0.0F)) {
+        if (Theme.isModern() && ColorUtility.getAlpha(color) != 0 && !(width <= 0.0F) && !(height <= 0.0F)) {
             int i = getGuiScale();
             pushPixelScale(graphics, i);
             int j = toPx(x, i);

@@ -16,6 +16,7 @@ import com.mojang.renderpearl.api.textures.FilterMode;
 import com.mojang.renderpearl.api.textures.GpuSampler;
 import com.mojang.renderpearl.api.textures.GpuTextureView;
 import dev.adapt.v3.Adapt;
+import dev.adapt.v3.ui.theme.Theme;
 import java.util.Optional;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MappableRingBuffer;
@@ -49,7 +50,8 @@ public final class BackdropBlur {
     }
 
     public static GpuTextureView getTextureView() {
-        if (unavailable) {
+        // returning null skips request(), so process() never runs the five full-frame passes
+        if (unavailable || !Theme.isModern()) {
             return null;
         }
 

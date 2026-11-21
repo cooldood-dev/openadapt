@@ -3,6 +3,7 @@ package dev.adapt.v3.feature.module.impl.movement.noslow;
 import dev.adapt.v3.Adapt;
 import dev.adapt.v3.feature.module.Module;
 import dev.adapt.v3.feature.module.ModuleCategory;
+import dev.adapt.v3.feature.module.impl.movement.noslow.mode.HypixelNoSlow;
 import dev.adapt.v3.feature.module.impl.movement.noslow.mode.NcpNoSlow;
 import dev.adapt.v3.feature.module.mode.ModuleMode;
 import dev.adapt.v3.feature.property.impl.BooleanProperty;
@@ -20,7 +21,7 @@ public final class NoSlowModule extends Module {
     public NoSlowModule() {
         super("No Slow", "Removes the slowdown from using items.", ModuleCategory.MOVEMENT);
         this.addProperties(this.mode, this.allowSprinting);
-        this.registerModes(new NcpNoSlow(this));
+        this.registerModes(new NcpNoSlow(this), new HypixelNoSlow(this));
     }
 
     public static boolean canSprintWhileUsing() {
@@ -73,7 +74,8 @@ public final class NoSlowModule extends Module {
     }
 
     public enum Mode implements Displayable {
-        NCP("NCP");
+        NCP("NCP"),
+        HYPIXEL("Hypixel");
 
         public final String displayName;
 

@@ -2,6 +2,7 @@ package dev.adapt.v3.ui.render;
 
 import dev.adapt.v3.ui.screen.BaseScreen;
 import dev.adapt.v3.ui.screen.HudEditorScreen;
+import dev.adapt.v3.ui.theme.OldSchoolStyle;
 import dev.adapt.v3.ui.theme.Theme;
 import dev.adapt.v3.util.render.ColorUtility;
 import net.minecraft.client.Minecraft;
@@ -22,6 +23,11 @@ public final class Glass {
     }
 
     public static void drawThemedCard(GuiGraphicsExtractor graphics, float x, float y, float width, float height, float first, float second, int color) {
+        if (OldSchoolStyle.active()) {
+            drawFlat(graphics, x, y, width, height, second, color);
+            return;
+        }
+
         if (!(second <= 0.01F)) {
             float f = Render2D.snapToPixel(x);
             float f1 = Render2D.snapToPixel(y);
@@ -88,6 +94,11 @@ public final class Glass {
         boolean flag,
         boolean flag2
     ) {
+        if (OldSchoolStyle.active()) {
+            drawFlat(graphics, x, y, width, height, value2, value5);
+            return;
+        }
+
         if (!(value2 <= 0.01F)) {
             float f = Render2D.snapToPixel(x);
             float f1 = Render2D.snapToPixel(y);
@@ -122,14 +133,32 @@ public final class Glass {
     public static void drawSheenPanel(GuiGraphicsExtractor graphics, float x, float y, float width, float height, float radius, float value, float value2, float value3) {
         if (!(value <= 0.01F)) {
             drawPanel(graphics, x, y, width, height, radius, value, value2, value3, 1493961744);
+            if (OldSchoolStyle.active()) {
+                return;
+            }
+
             float f = Render2D.snapToPixel(x);
             float f1 = Render2D.snapToPixel(y);
             float f2 = Render2D.snapToPixel(x + width) - f;
             float f3 = Render2D.snapToPixel(y + height) - f1;
             float f4 = Render2D.snapToPixel(radius);
-            Render2D.fillSampledRoundedRect(graphics, f, f1, f2, f3, f4, value, (first, second) -> ColorUtility.scaleAlpha(285212671, 1.0F - second));
+            if (Theme.isModern()) {
+                Render2D.fillSampledRoundedRect(graphics, f, f1, f2, f3, f4, value, (first, second) -> ColorUtility.scaleAlpha(285212671, 1.0F - second));
+            }
+
             graphics.nextStratum();
             Render2D.drawBatchedHairlineBorder(graphics, f, f1, f2, f3, f4, ColorUtility.scaleAlpha(352321535, value));
+            graphics.nextStratum();
+        }
+    }
+
+    // OldSchool panel: square and opaque. Faint overlays (low alpha) keep their own colour so they stay faint.
+    public static void drawFlat(GuiGraphicsExtractor graphics, float x, float y, float width, float height, float alpha, int color) {
+        if (!(alpha <= 0.01F) && !(width <= 0.0F) && !(height <= 0.0F)) {
+            int i = ColorUtility.getAlpha(color) >= 96 ? OldSchoolStyle.PANEL_BG : color;
+            float f = Render2D.snapToPixel(x);
+            float f1 = Render2D.snapToPixel(y);
+            Render2D.fillRect(graphics, f, f1, Render2D.snapToPixel(x + width) - f, Render2D.snapToPixel(y + height) - f1, ColorUtility.scaleAlpha(i, alpha));
             graphics.nextStratum();
         }
     }

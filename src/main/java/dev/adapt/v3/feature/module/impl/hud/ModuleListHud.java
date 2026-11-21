@@ -10,6 +10,7 @@ import dev.adapt.v3.feature.property.impl.NumberProperty;
 import dev.adapt.v3.hud.HudModule;
 import dev.adapt.v3.ui.render.Fonts;
 import dev.adapt.v3.ui.render.Render2D;
+import dev.adapt.v3.ui.theme.OldSchoolStyle;
 import dev.adapt.v3.ui.theme.Theme;
 import dev.adapt.v3.util.Profiler;
 import dev.adapt.v3.util.animation.Animation;
@@ -152,10 +153,12 @@ public final class ModuleListHud extends HudModule {
 
         graphics.nextStratum();
 
-        for (ModuleListHud.TextDraw modulelisthud$textdraw1 : arraylist) {
-            int j = darkenForShadow(modulelisthud$textdraw1.color());
-            if (ColorUtility.getAlpha(j) > 0) {
-                Fonts.LIST.drawCached(graphics, modulelisthud$textdraw1.text(), modulelisthud$textdraw1.x() + f2, modulelisthud$textdraw1.y() + f3, j);
+        if (!OldSchoolStyle.active()) {
+            for (ModuleListHud.TextDraw modulelisthud$textdraw1 : arraylist) {
+                int j = darkenForShadow(modulelisthud$textdraw1.color());
+                if (ColorUtility.getAlpha(j) > 0) {
+                    Fonts.LIST.drawCached(graphics, modulelisthud$textdraw1.text(), modulelisthud$textdraw1.x() + f2, modulelisthud$textdraw1.y() + f3, j);
+                }
             }
         }
 
@@ -311,6 +314,20 @@ public final class ModuleListHud extends HudModule {
                 ? this.entries.get(arraylist.get(j + 1)).slideY.getValue()
                 : f2 + this.getRowHeight() * modulelisthud$entrystate.presence.getValue();
             afloat[j] = new float[]{f1, f1 + f, f2, Math.max(f2, f3)};
+        }
+
+        if (OldSchoolStyle.active()) {
+            float f6 = this.opacity.getFloatValue() / 100.0F;
+            int k = OldSchoolStyle.accent();
+
+            for (float[] afloat1 : afloat) {
+                float f7 = afloat1[3] - afloat1[2];
+                Render2D.fillRect(graphics, afloat1[0], afloat1[2], afloat1[1] - afloat1[0], f7, ColorUtility.scaleAlpha(OldSchoolStyle.LIST_ROW_BG, f6));
+                Render2D.fillRect(graphics, flag2 ? afloat1[1] - 1.5F : afloat1[0], afloat1[2], 1.5F, f7, k);
+            }
+
+            graphics.nextStratum();
+            return;
         }
 
         float f4 = this.opacity.getFloatValue() / 100.0F;

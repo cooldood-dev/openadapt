@@ -138,7 +138,7 @@ public final class LaunchGuard {
                     .timeout(Duration.ofSeconds(15L))
                     .header("Content-Type", "application/json")
                     .header("Authorization", "AdaptDev " + s)
-                    .header("User-Agent", "adaptv3/3.0.4")
+                    .header("User-Agent", "adaptv3/3.1")
                     .POST(BodyPublishers.ofString(jsonobject.toString()))
                     .build(),
                 BodyHandlers.ofString()
@@ -229,7 +229,7 @@ public final class LaunchGuard {
                     HttpRequest.newBuilder(URI.create(getApiBase() + "/api/client/heartbeat"))
                         .timeout(Duration.ofSeconds(15L))
                         .header("Content-Type", "application/json")
-                        .header("User-Agent", "adaptv3/3.0.4")
+                        .header("User-Agent", "adaptv3/3.1")
                         .POST(BodyPublishers.ofString(jsonobject.toString()))
                         .build(),
                     BodyHandlers.ofString()

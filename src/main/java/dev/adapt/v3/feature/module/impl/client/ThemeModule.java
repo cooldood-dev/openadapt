@@ -9,6 +9,7 @@ import dev.adapt.v3.feature.property.impl.ColorProperty;
 import dev.adapt.v3.feature.property.impl.EnumProperty;
 import dev.adapt.v3.feature.property.impl.NumberProperty;
 import dev.adapt.v3.ui.theme.Accent;
+import dev.adapt.v3.ui.theme.UiMode;
 
 public final class ThemeModule extends Module implements HiddenModule {
     public final EnumProperty<Accent> accent = new EnumProperty<>("Accent", Accent.PEARL);
@@ -17,13 +18,25 @@ public final class ThemeModule extends Module implements HiddenModule {
     public final BooleanProperty animateGradient = (BooleanProperty)new BooleanProperty("Animate Gradient", false).hideIf(() -> !this.hasGradient());
     public final NumberProperty gradientSpeed = (NumberProperty)new NumberProperty("Gradient Speed", "x", 1.0, 0.25, 3.0, 0.05)
         .hideIf(() -> !this.hasGradient() || !this.animateGradient.getValue());
-    public final NumberProperty lensZoom = new NumberProperty("Lens Zoom", "x", 1.12, 1.0, 1.4, 0.02);
-    public final NumberProperty bloom = new NumberProperty("Bloom", "%", 45.0, 0.0, 100.0, 5.0);
+    // OldSchool strips every effect (blur, shadows, bloom, glow, nebula); Modern draws them all
+    public final EnumProperty<UiMode> uiMode = new EnumProperty<>("UI Mode", UiMode.MODERN);
+    public final NumberProperty lensZoom = (NumberProperty)new NumberProperty("Lens Zoom", "x", 1.12, 1.0, 1.4, 0.02).hideIf(() -> !this.isModern());
+    public final NumberProperty bloom = (NumberProperty)new NumberProperty("Bloom", "%", 45.0, 0.0, 100.0, 5.0).hideIf(() -> !this.isModern());
     public final NumberProperty cornerRadius = new NumberProperty("Corner Radius", "px", 6.0, 2.0, 14.0, 1.0);
 
     public ThemeModule() {
         super("Theme", "Accent colour, glass, bloom and rounding.", ModuleCategory.VISUAL);
-        this.addProperties(this.accent, this.primary, this.secondary, this.animateGradient, this.gradientSpeed, this.lensZoom, this.bloom, this.cornerRadius);
+        this.addProperties(
+            this.uiMode,
+            this.accent,
+            this.primary,
+            this.secondary,
+            this.animateGradient,
+            this.gradientSpeed,
+            this.lensZoom,
+            this.bloom,
+            this.cornerRadius
+        );
         this.setEnabled(true);
     }
 
@@ -35,6 +48,10 @@ public final class ThemeModule extends Module implements HiddenModule {
     @Override
     public void onBind() {
         Adapt.getInstance().openDashboard();
+    }
+
+    public boolean isModern() {
+        return this.uiMode.getValue() == UiMode.MODERN;
     }
 
     public boolean isCustomAccent() {
